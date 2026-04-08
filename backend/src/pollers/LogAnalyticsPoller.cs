@@ -172,7 +172,7 @@ public class LogAnalyticsPoller : BackgroundService
                 _logger.LogError(ex, "Error querying log analytics.");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }
     }
 

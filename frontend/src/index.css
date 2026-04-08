@@ -772,6 +772,7 @@ tbody td {
 
 .login-btn:hover {
   background: var(--primary-light) !important;
+  transform: none !important;
 }
 
 .login-btn:active {

@@ -416,15 +416,32 @@ static string GetVmPowerStatus(VirtualMachineInstanceView instanceView)
         return powerStatus.DisplayStatus.Trim();
     }
 
-    return powerStatus?.Code switch
+    if (powerStatus?.Code is string powerCode)
     {
-        string code when code.Contains("running", StringComparison.OrdinalIgnoreCase) => "VM running",
-        string code when code.Contains("restarting", StringComparison.OrdinalIgnoreCase) => "VM restarting",
-        string code when code.Contains("starting", StringComparison.OrdinalIgnoreCase) => "VM starting",
-        string code when code.Contains("stopping", StringComparison.OrdinalIgnoreCase) => "VM stopping",
-        string code when code.Contains("deallocating", StringComparison.OrdinalIgnoreCase) => "VM deallocating",
-        string code when code.Contains("deallocated", StringComparison.OrdinalIgnoreCase) => "VM deallocated",
-        string code when code.Contains("stopped", StringComparison.OrdinalIgnoreCase) => "VM stopped",
+        return powerCode switch
+        {
+            _ when powerCode.Contains("running", StringComparison.OrdinalIgnoreCase) => "VM running",
+            _ when powerCode.Contains("restarting", StringComparison.OrdinalIgnoreCase) => "VM restarting",
+            _ when powerCode.Contains("starting", StringComparison.OrdinalIgnoreCase) => "VM starting",
+            _ when powerCode.Contains("stopping", StringComparison.OrdinalIgnoreCase) => "VM stopping",
+            _ when powerCode.Contains("deallocating", StringComparison.OrdinalIgnoreCase) => "VM deallocating",
+            _ when powerCode.Contains("deallocated", StringComparison.OrdinalIgnoreCase) => "VM deallocated",
+            _ when powerCode.Contains("stopped", StringComparison.OrdinalIgnoreCase) => "VM stopped",
+            _ => "VM unknown"
+        };
+    }
+
+    // No PowerState entry yet — check ProvisioningState for VMs that are still booting up
+    var provisioningStatus = instanceView.Statuses
+        .FirstOrDefault(status => status.Code.StartsWith("ProvisioningState/", StringComparison.OrdinalIgnoreCase));
+
+    return provisioningStatus?.Code switch
+    {
+        string code when code.Contains("creating", StringComparison.OrdinalIgnoreCase) => "VM starting",
+        string code when code.Contains("updating", StringComparison.OrdinalIgnoreCase) => "VM starting",
+        string code when code.Contains("deleting", StringComparison.OrdinalIgnoreCase) => "VM deallocating",
+        string code when code.Contains("failed", StringComparison.OrdinalIgnoreCase) => "VM stopped",
+        string code when code.Contains("succeeded", StringComparison.OrdinalIgnoreCase) => "VM running",
         _ => "VM unknown"
     };
 }

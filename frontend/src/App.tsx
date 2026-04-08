@@ -57,9 +57,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Search size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>KQL Log Explorer</span>
           </NavLink>
         </nav>
-        <div style={{ padding: "0 0.5rem 1rem 0.5rem", marginTop: "auto", display: "flex", justifyContent: "center" }}>
+        <div style={{ padding: 0, marginRight: isSidebarOpen ? "-1rem" : 0, marginTop: "auto", marginBottom: "-1.5rem", display: "flex", justifyContent: isSidebarOpen ? "flex-end" : "center", position: "relative" }}>
           <button className="btn-no-anim toggle-nav-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            title={isSidebarOpen ? "Collapse menu" : "Expand menu"}
+            data-title={isSidebarOpen ? "Collapse menu" : "Expand menu"}
             style={{
               cursor: "pointer",
               marginBottom: 0,

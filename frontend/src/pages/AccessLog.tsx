@@ -82,7 +82,7 @@ export default function AccessLog() {
     <div className="fade-in">
       <div className="flex gap-md mb-xl">
          <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>
-            <p className="text-xs font-semibold mb-sm text-secondary">TOTAL ATTEMPTS (24H)</p>
+            <p className="text-xs font-semibold mb-sm text-secondary">TOTAL ATTEMPTS (1H)</p>
             <h2 className="m-0">{totalCount}</h2>
          </div>
          <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>

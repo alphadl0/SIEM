@@ -204,7 +204,8 @@ function App() {
               <Route path="/access-log" element={<AccessLog />} />
               <Route path="/processes" element={<ProcessMonitor />} />
               <Route path="/infrastructure-assets" element={<AssetExplorer />} />
-              <Route path="/sql-monitor" element={<Navigate to="/infrastructure-assets" replace />} />              <Route path="/azure-activity" element={<AzureActivity />} />              <Route path="/search" element={<SecuritySearch />} />
+              <Route path="/azure-activity" element={<AzureActivity />} />
+              <Route path="/search" element={<SecuritySearch />} />
               <Route path="*" element={<div><h1>404 Not Found</h1></div>} />
             </Routes>
           </Layout>
@@ -215,31 +216,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

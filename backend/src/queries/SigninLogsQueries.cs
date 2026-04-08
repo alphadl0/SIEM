@@ -27,7 +27,6 @@ SigninLogs
 | where isnotempty(UserPrincipalName) or isnotempty(IPAddress)
 | order by TimeGenerated desc";
 
-    public static string GetRecentLogsQuery(int take = 50) => GetRecentLogsPageQuery(0, take);
 
     public static string GetRecentLogsPageQuery(int skip, int take, string? searchTerm = null, string? status = null) => $@"
 {GetRecentLogsBaseQuery(searchTerm, status)}

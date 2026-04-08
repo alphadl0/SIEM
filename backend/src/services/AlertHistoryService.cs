@@ -39,6 +39,19 @@ public class AlertHistoryService
         return _alertEngine.GetRecentAlertsPage(page, pageSize, searchTerm, severity, excludeAzure);
     }
 
+    private async Task<Azure.Response<Azure.Monitor.Query.Models.LogsQueryResult>?> SafeQueryAsync(LogsQueryClient client, string workspaceId, string query, QueryTimeRange timeRange, CancellationToken ct)
+    {
+        try
+        {
+            return await client.QueryWorkspaceAsync(workspaceId, query, timeRange, cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to query workspace for historical alerts.");
+            return null;
+        }
+    }
+
     private async Task EnsureHydratedAsync(CancellationToken cancellationToken)
     {
         if (_isHydrated || string.IsNullOrWhiteSpace(_workspaceId))
@@ -56,18 +69,18 @@ public class AlertHistoryService
 
             var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
             var results = await Task.WhenAll(
-                _client.QueryWorkspaceAsync(_workspaceId, SecurityEventQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, SyslogQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, WindowsEventQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, LinuxAuditQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, AuditLogsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, AADRiskyUsersQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: cancellationToken)
+                SafeQueryAsync(_client, _workspaceId, SecurityEventQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, SyslogQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, WindowsEventQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, LinuxAuditQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, AuditLogsQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, AADRiskyUsersQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken),
+                SafeQueryAsync(_client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken)
             );
 
-            foreach (var row in results[0].Value.Table.Rows)
+            if (results[0] != null) foreach (var row in results[0].Value.Table.Rows)
             {
                 await _alertEngine.ProcessSecurityEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -82,7 +95,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[1].Value.Table.Rows)
+            if (results[1] != null) foreach (var row in results[1].Value.Table.Rows)
             {
                 await _alertEngine.ProcessSyslogAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -93,7 +106,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[2].Value.Table.Rows)
+            if (results[2] != null) foreach (var row in results[2].Value.Table.Rows)
             {
                 await _alertEngine.ProcessWindowsEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -104,7 +117,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[3].Value.Table.Rows)
+            if (results[3] != null) foreach (var row in results[3].Value.Table.Rows)
             {
                 await _alertEngine.ProcessLinuxAuditAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -114,7 +127,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[4].Value.Table.Rows)
+            if (results[4] != null) foreach (var row in results[4].Value.Table.Rows)
             {
                 await _alertEngine.ProcessSigninLogAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -130,7 +143,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[5].Value.Table.Rows)
+            if (results[5] != null) foreach (var row in results[5].Value.Table.Rows)
             {
                 await _alertEngine.ProcessAuditLogAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -145,7 +158,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[6].Value.Table.Rows)
+            if (results[6] != null) foreach (var row in results[6].Value.Table.Rows)
             {
                 await _alertEngine.ProcessRiskyUserAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -158,7 +171,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[7].Value.Table.Rows)
+            if (results[7] != null) foreach (var row in results[7].Value.Table.Rows)
             {
                 await _alertEngine.ProcessUserRiskEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -174,7 +187,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            foreach (var row in results[8].Value.Table.Rows)
+            if (results[8] != null) foreach (var row in results[8].Value.Table.Rows)
             {
                 await _alertEngine.ProcessAzureActivityLogAsync(
                     GetTimestamp(row["TimeGenerated"]),

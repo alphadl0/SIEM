@@ -43,11 +43,14 @@ export interface AlertEvent {
   description: string;
   timestamp: string;
   geo?: {
-    country: string;
-    city: string;
-    isp: string;
+    ip?: string;
+    city?: string;
+    country?: string;
+    countryCode?: string;
+    isp?: string;
     lat?: number;
     lon?: number;
+    isPrivate?: boolean;
   };
 }
 

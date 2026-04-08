@@ -771,7 +771,7 @@ tbody td {
   position: relative;
 }
 
-.sidebar.closed .nav-item::after, .toggle-nav-btn::after {
+.sidebar.closed .nav-item::after {
   content: attr(data-title);
   position: absolute;
   left: calc(100% + 12px);
@@ -790,6 +790,35 @@ tbody td {
   transition: opacity 0.15s ease-in-out;
   z-index: 9999;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar .toggle-nav-btn {
+  position: relative;
+}
+
+.sidebar .toggle-nav-btn::after {
+  content: attr(data-title);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #374151;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease-in-out;
+  z-index: 9999;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar.closed .toggle-nav-btn::after {
+  left: calc(100% + 20px);
 }
 
 .sidebar.closed .nav-item:hover::after, .toggle-nav-btn:hover::after {

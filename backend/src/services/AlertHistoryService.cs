@@ -63,8 +63,12 @@ public class AlertHistoryService
                 _client.QueryWorkspaceAsync(_workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
                 _client.QueryWorkspaceAsync(_workspaceId, AuditLogsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
                 _client.QueryWorkspaceAsync(_workspaceId, AADRiskyUsersQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-            _client.QueryWorkspaceAsync(_workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-            _client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: cancellationToken)
+                _client.QueryWorkspaceAsync(_workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
+                _client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: cancellationToken)
+            );
+
+            foreach (var row in results[0].Value.Table.Rows)
+            {
                 await _alertEngine.ProcessSecurityEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
                     row["Computer"]?.ToString() ?? string.Empty,

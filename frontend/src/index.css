@@ -186,14 +186,25 @@ button, .btn {
   padding: 0.6rem 1.5rem;
   font-weight: 500;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s ease;
   border: none;
   background-color: var(--primary);
   color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  user-select: none;
+}
+
+button:hover, .btn:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
 }
 
 button:active, .btn:active {
-  transform: scale(0.96);
+  transform: translateY(1px) scale(0.96);
+  opacity: 0.9;
 }
 
 input, select, textarea {
@@ -251,10 +262,26 @@ input:focus, select:focus, textarea:focus {
 .btn-outline:hover {
   background: var(--primary);
   color: white;
+  transform: none;
+}
+
+.btn-outline:active {
+  transform: none;
+  opacity: 1;
+}
+
+.btn-no-anim:hover {
+  transform: none;
+}
+
+.btn-no-anim:active {
+  transform: none;
+  opacity: 0.9;
 }
 
 table {
-  width: 100%;
+  min-width: 100%;
+  width: max-content;
   border-collapse: collapse;
 }
 
@@ -266,6 +293,16 @@ thead th {
   text-align: left;
   padding: 0.5rem;
   border-bottom: 1px solid var(--border-light);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  resize: horizontal;
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+}
+
+thead th::-webkit-resizer {
+  background: transparent;
+  cursor: col-resize;
 }
 
 .identity-log-table thead th {
@@ -317,6 +354,7 @@ thead th {
 
 .incident-timestamp {
   font-size: 0.66rem;
+  white-space: nowrap;
 }
 
 .incident-strong {
@@ -382,8 +420,10 @@ thead th {
   vertical-align: middle;
 }
 
-.overview-feed-timestamp {
+.overview-feed-timestamp,
+.identity-log-timestamp {
   font-size: 0.66rem;
+  white-space: nowrap;
 }
 
 .overview-feed-strong {
@@ -546,7 +586,7 @@ thead th {
 }
 
 .asset-card {
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
 .asset-card-header {
@@ -554,44 +594,45 @@ thead th {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.6rem;
 }
 
 .asset-card-type {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 800;
   color: #64748b;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
 }
 
 .asset-card-name {
-  margin: 0 0 0.9rem 0;
-  font-size: 1rem;
+  margin: 0 0 0.7rem 0;
+  font-size: 0.95rem;
   line-height: 1.15;
 }
 
 .asset-card-panel {
   background: rgba(241, 245, 249, 0.5);
-  border-radius: 10px;
-  padding: 0.95rem;
+  border-radius: 8px;
+  padding: 0.75rem;
 }
 
 .asset-card-details {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .asset-detail-row {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 0.5rem;
   align-items: center;
   min-width: 0;
+  font-size: 0.8rem;
 }
 
 .asset-detail-row-wrap {
@@ -647,6 +688,9 @@ tbody tr:hover {
 tbody td {
   padding: 0.75rem 0.5rem;
   border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  vertical-align: middle;
 }
 
 .login-btn {

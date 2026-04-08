@@ -54,7 +54,7 @@ public class AlertHistoryService
                 return;
             }
 
-            var timeRange = new QueryTimeRange(TimeSpan.FromHours(24));
+            var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
             var results = await Task.WhenAll(
                 _client.QueryWorkspaceAsync(_workspaceId, SecurityEventQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
                 _client.QueryWorkspaceAsync(_workspaceId, SyslogQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
@@ -63,11 +63,8 @@ public class AlertHistoryService
                 _client.QueryWorkspaceAsync(_workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
                 _client.QueryWorkspaceAsync(_workspaceId, AuditLogsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
                 _client.QueryWorkspaceAsync(_workspaceId, AADRiskyUsersQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
-                _client.QueryWorkspaceAsync(_workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken)
-            );
-
-            foreach (var row in results[0].Value.Table.Rows)
-            {
+            _client.QueryWorkspaceAsync(_workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken: cancellationToken),
+            _client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: cancellationToken)
                 await _alertEngine.ProcessSecurityEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
                     row["Computer"]?.ToString() ?? string.Empty,
@@ -169,6 +166,19 @@ public class AlertHistoryService
                     row["RiskDetail"]?.ToString() ?? string.Empty,
                     row["IpAddress"]?.ToString() ?? string.Empty,
                     row["Location"]?.ToString() ?? string.Empty,
+                    cancellationToken,
+                    broadcast: false);
+            }
+
+            foreach (var row in results[8].Value.Table.Rows)
+            {
+                await _alertEngine.ProcessAzureActivityLogAsync(
+                    GetTimestamp(row["TimeGenerated"]),
+                    row["Caller"]?.ToString() ?? string.Empty,
+                    row["OperationNameValue"]?.ToString() ?? string.Empty,
+                    row["_ResourceId"]?.ToString() ?? string.Empty,
+                    row["ActivityStatusValue"]?.ToString() ?? string.Empty,
+                    $"IP: {row["CallerIpAddress"]?.ToString() ?? "Unknown"}",
                     cancellationToken,
                     broadcast: false);
             }

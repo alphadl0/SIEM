@@ -1,0 +1,4 @@
+bin/
+obj/
+verify-vm-status/
+.env

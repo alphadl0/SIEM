@@ -36,7 +36,6 @@ export interface VmStatusEvent {
 }
 
 export interface AlertEvent {
-  useCaseId: string;
   title: string;
   severity: string;
   vm: string;
@@ -400,7 +399,6 @@ function mergeAlerts(
 function createAlertKey(alert: AlertEvent) {
   return [
     alert.timestamp,
-    alert.useCaseId,
     alert.vm,
     alert.sourceIp,
     alert.description,

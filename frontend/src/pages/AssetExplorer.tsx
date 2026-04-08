@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSignalR } from '../hooks/useSignalR';
-import { Server, Activity, MapPin, Cpu, CheckCircle, Network, Globe, HardDrive } from 'lucide-react';
+import { Server, Activity, MapPin, Cpu, Network, Globe, HardDrive } from 'lucide-react';
 import { getVmAssetLabel, getVmBadgeTone, isVmRunning } from '../lib/vmStatus';
 import { FilterBar } from '../components/FilterBar';
 
@@ -45,7 +45,7 @@ export default function AssetExplorer() {
         ]}
       />
       
-      <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))', gap: '0.75rem' }}>
+      <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
         {vms.length > 0 ? vms.map((vm, i) => (
           <div
             key={i}
@@ -84,12 +84,6 @@ export default function AssetExplorer() {
                       icon={<HardDrive size={18} />}
                       label="Disk"
                       value={formatDisk(vm.diskUsedGb, vm.diskTotalGb)}
-                    />
-                    <DetailItem
-                      icon={<CheckCircle size={18} className="text-success" />}
-                      label="SIEM Agent Health"
-                      value="CONNECTED"
-                      valueColor="var(--secondary)"
                     />
                 </div>
             </div>

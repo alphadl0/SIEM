@@ -6,7 +6,7 @@ import { fetchApiJson, type PagedResponse } from '../lib/backend';
 import { FilterBar } from '../components/FilterBar';
 import { Pagination } from '../components/Pagination';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 export default function AlertHistory() {
   const { instance, accounts } = useMsal();
@@ -16,7 +16,7 @@ export default function AlertHistory() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [severity, setSeverity] = useState('all');
 
@@ -75,7 +75,7 @@ export default function AlertHistory() {
       <FilterBar 
         onSearch={onSearch}
         onFilterChange={onFilterChange}
-        placeholder="Filter by Source, Use Case or ID..."
+        placeholder="Filter by Source, Name or ID..."
         filters={[
           {
             key: 'severity',
@@ -92,14 +92,14 @@ export default function AlertHistory() {
         ]}
       />
 
-      <div className="card">
+      <div className="card" style={{ overflowX: 'auto' }}>
         {error && displayedAlerts.length === 0 && <p className="text-critical">{error}</p>}
-        {(loading && alerts.length === 0) ? <p>Loading history...</p> : (
-          <table className="contrast-table-head incident-table">
+        {(loading && alerts.length === 0) ? <p>Loading history...</p> : (       
+          <table className="contrast-table-head incident-table" style={{ minWidth: '100%', width: 'max-content' }}>
             <thead>
               <tr>
                 <th>TIMESTAMP</th>
-                <th>USE CASE</th>
+                <th>NAME</th>
                 <th>SEVERITY</th>
                 <th>SOURCE</th>
                 <th>DESCRIPTION</th>
@@ -111,8 +111,8 @@ export default function AlertHistory() {
                   <td className="incident-cell incident-timestamp" title={new Date(alert.timestamp).toLocaleString()}>
                     {new Date(alert.timestamp).toLocaleString()}
                   </td>
-                  <td className="incident-cell incident-strong" title={alert.useCaseId}>
-                    {alert.useCaseId}
+                  <td className="incident-cell incident-strong" title={alert.title}>
+                    {alert.title}
                   </td>
                   <td className="incident-cell">
                     <span className={`badge ${alert.severity === 'Critical' ? 'critical' : alert.severity === 'High' ? 'high' : 'medium'} incident-status-badge`}>

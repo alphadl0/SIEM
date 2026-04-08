@@ -29,27 +29,6 @@ public class VmRunCommandService
         _logger = logger;
     }
 
-    public async Task<List<string>> GetRunningServicesAsync(string vmName, string osType)
-    {
-        string command = osType.ToLower() == "windows"
-            ? "Get-Service | Where-Object {$_.Status -eq 'Running'} | Select-Object -ExpandProperty Name"
-            : "systemctl list-units --type=service --state=running --no-pager --plain | awk '{print $1}'";
-
-        var input = new RunCommandInput("RunPowerShellScript");
-        if (osType.ToLower() != "windows") input = new RunCommandInput("RunShellScript");
-        
-        input.Script.Add(command);
-
-        try {
-            var vm = CreateVirtualMachineResource(vmName);
-            var result = await vm.RunCommandAsync(Azure.WaitUntil.Completed, input);
-            var output = result.Value?.Value?.FirstOrDefault()?.Message ?? "";
-            return output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
-        } catch {
-            return new List<string> { "Error getting services via Run Command." };
-        }
-    }
-
     public async Task<VmGuestInsights> GetGuestInsightsAsync(VirtualMachineResource vm, bool isRunning, CancellationToken cancellationToken)
     {
         if (_guestInsightsCache.TryGetValue(vm.Data.Name, out var cached) &&

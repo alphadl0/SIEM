@@ -115,7 +115,8 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-builder.Services.AddHttpClient<backend.src.services.GeoService>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<backend.src.services.GeoService>();
 builder.Services.AddSingleton<backend.src.AlertEngine>();
 builder.Services.AddSingleton<backend.src.services.AlertHistoryService>();
 builder.Services.AddSingleton<backend.src.services.VmRunCommandService>();
@@ -196,7 +197,7 @@ app.MapGet("/api/signin-logs", async (int? page, int? pageSize, string? searchTe
     var normalizedPage = NormalizePage(page);
     var normalizedPageSize = NormalizePageSize(pageSize, 25);
     var skip = (normalizedPage - 1) * normalizedPageSize;
-    var timeRange = new QueryTimeRange(TimeSpan.FromHours(24));
+    var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
 
     var response = await client.QueryWorkspaceAsync(
         workspaceId,
@@ -226,7 +227,27 @@ app.MapGet("/api/signin-logs", async (int? page, int? pageSize, string? searchTe
     });
 }).RequireAuthorization("SecurityTeamPolicy");
 
-app.MapPost("/api/search", async (string query, LogsQueryClient client, CancellationToken cancellationToken) => {
+app.MapGet("/api/schema", async (IConfiguration configuration, CancellationToken cancellationToken) => {
+    var workspaceId = CleanSetting(GetSetting(configuration, "LOG_ANALYTICS_WORKSPACE_ID"));
+    if (string.IsNullOrWhiteSpace(workspaceId)) return Results.Problem("Workspace ID not configured.");
+
+    var credential = new DefaultAzureCredential();
+    var token = await credential.GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { "https://api.loganalytics.io/.default" }), cancellationToken);
+    
+    using var httpClient = new HttpClient();
+    httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.Token);
+    var response = await httpClient.GetAsync($"https://api.loganalytics.io/v1/workspaces/{workspaceId}/metadata", cancellationToken);
+    
+    if (response.IsSuccessStatusCode)
+    {
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        return Results.Text(content, "application/json");
+    }
+    return Results.StatusCode((int)response.StatusCode);
+}).RequireAuthorization("SecurityTeamPolicy");
+
+app.MapPost("/api/search", async ([Microsoft.AspNetCore.Mvc.FromBody] SearchRequest req, LogsQueryClient client, CancellationToken cancellationToken) => {
+    var query = req.Query;
     var workspaceId = CleanSetting(GetSetting(builder.Configuration, "LOG_ANALYTICS_WORKSPACE_ID"));
 
     if (string.IsNullOrWhiteSpace(workspaceId))
@@ -242,7 +263,7 @@ app.MapPost("/api/search", async (string query, LogsQueryClient client, Cancella
     var response = await client.QueryWorkspaceAsync(
         workspaceId,
         query,
-        new QueryTimeRange(TimeSpan.FromHours(24)),
+        new QueryTimeRange(TimeSpan.FromHours(1)),
         cancellationToken: cancellationToken);
 
     var table = response.Value.Table;
@@ -253,7 +274,7 @@ app.MapHub<SiemHub>("/hub").RequireAuthorization("SecurityTeamPolicy");
 
 app.Run();
 
-static string GetSetting(ConfigurationManager configuration, string key)
+static string GetSetting(IConfiguration configuration, string key)
 {
     return configuration[key] ?? Environment.GetEnvironmentVariable(key) ?? string.Empty;
 }
@@ -402,3 +423,5 @@ static string GetVmPowerStatus(VirtualMachineInstanceView instanceView)
         _ => "VM unknown"
     };
 }
+
+public record SearchRequest(string Query);

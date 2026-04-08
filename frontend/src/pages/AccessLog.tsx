@@ -3,8 +3,9 @@ import { useMsal } from '@azure/msal-react';
 import { CircleUserRound } from 'lucide-react';
 import { fetchApiJson, type PagedResponse } from '../lib/backend';
 import { FilterBar } from '../components/FilterBar';
+import { Pagination } from '../components/Pagination';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 interface AccessLogRow {
   TimeGenerated: string;
@@ -108,13 +109,13 @@ export default function AccessLog() {
         ]}
       />
 
-      <div className="card">
+      <div className="card" style={{ overflowX: 'auto' }}>
         <h3 className="flex items-center gap-sm mb-lg text-primary">
             <CircleUserRound size={22} className="text-primary" /> Identity Logs
         </h3>
         {error && <p className="text-critical">{error}</p>}
         {loading ? <p>Analyzing Entra ID logs...</p> : (
-          <table className="identity-log-table">
+          <table className="identity-log-table" style={{ minWidth: '100%', width: 'max-content' }}>
             <thead>
               <tr>
                 <th>TIMESTAMP</th>
@@ -178,8 +179,8 @@ export default function AccessLog() {
             </tbody>
           </table>
         )}
-        {!loading && totalCount > PAGE_SIZE && (
-          <PaginationBar
+        {!loading && totalCount > 0 && (
+          <Pagination
             page={page}
             totalPages={totalPages}
             totalCount={totalCount}
@@ -187,52 +188,6 @@ export default function AccessLog() {
             onPageChange={setPage}
           />
         )}
-      </div>
-    </div>
-  );
-}
-
-function PaginationBar({
-  page,
-  totalPages,
-  totalCount,
-  pageSize,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  totalCount: number;
-  pageSize: number;
-  onPageChange: (page: number) => void;
-}) {
-  const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, totalCount);
-
-  return (
-    <div className="flex justify-between items-center gap-md" style={{ marginTop: '1rem' }}>
-      <p className="m-0 text-sm text-secondary">
-        Showing {start}-{end} of {totalCount}
-      </p>
-      <div className="flex items-center gap-sm">
-        <button
-          className="btn-outline"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          style={{ opacity: page <= 1 ? 0.45 : 1 }}
-        >
-          Previous
-        </button>
-        <span className="text-sm text-secondary text-center" style={{ minWidth: '72px' }}>
-          Page {page} / {totalPages}
-        </span>
-        <button
-          className="btn-outline"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
-          style={{ opacity: page >= totalPages ? 0.45 : 1 }}
-        >
-          Next
-        </button>
       </div>
     </div>
   );

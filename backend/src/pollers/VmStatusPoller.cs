@@ -80,7 +80,7 @@ public class VmStatusPoller : BackgroundService
                 }
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
         }
     }
 

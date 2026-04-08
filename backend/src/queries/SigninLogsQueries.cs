@@ -16,7 +16,7 @@ SigninLogs
 | project TimeGenerated,
           UserPrincipalName = tostring(column_ifexists('UserPrincipalName', '')),
           UserDisplayName = tostring(column_ifexists('UserDisplayName', '')),
-          AppDisplayName = tostring(column_ifexists('AppDisplayName', '')),
+          AppDisplayName = tostring(column_ifexists('AppDisplayName', '')),     
           IPAddress = tostring(column_ifexists('IPAddress', '')),
           Location,
           DeviceDetail = iff(isempty(trim(' ', NormalizedDevice)), 'Unknown', trim(' ', NormalizedDevice)),
@@ -70,7 +70,7 @@ SigninLogs
 | extend DeviceDetailBag = todynamic(column_ifexists('DeviceDetail', dynamic(null)))
 | project TimeGenerated,
           UserPrincipalName = tostring(column_ifexists('UserPrincipalName', '')),
-          AppDisplayName = tostring(column_ifexists('AppDisplayName', '')),
+          AppDisplayName = tostring(column_ifexists('AppDisplayName', '')),     
           IPAddress = tostring(column_ifexists('IPAddress', '')),
           City = trim(' ', tostring(LocationDetailsBag.city)),
           Country = trim(' ', tostring(LocationDetailsBag.countryOrRegion)),

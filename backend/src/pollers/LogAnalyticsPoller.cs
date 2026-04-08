@@ -46,10 +46,7 @@ public class LogAnalyticsPoller : BackgroundService
                         client.QueryWorkspaceAsync(_workspaceId, SyslogQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
                         client.QueryWorkspaceAsync(_workspaceId, WindowsEventQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
                         client.QueryWorkspaceAsync(_workspaceId, LinuxAuditQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, AuditLogsQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, AADRiskyUsersQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken: stoppingToken)
+                        client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: stoppingToken)
                     );
 
                     // 1. Process SecurityEvents
@@ -143,108 +140,26 @@ public class LogAnalyticsPoller : BackgroundService
                         );
                     }
 
-                    // 5. Process SigninLogs
-                    var signinLogs = results[4].Value.Table;
-                    foreach (var row in signinLogs.Rows) {
-                        if (!ShouldProcess("SigninLogs",
+                    // 5. Process Azure Activity
+                    var azureActivities = results[4].Value.Table;
+                    foreach (var row in azureActivities.Rows) {
+                        if (!ShouldProcess("AzureActivity",
                             row["TimeGenerated"],
-                            row["UserPrincipalName"],
-                            row["IPAddress"],
-                            row["AppDisplayName"],
-                            row["ResultType"],
-                            row["ResultDescription"]))
+                            row["Caller"],
+                            row["OperationNameValue"],
+                            row["_ResourceId"],
+                            row["ActivityStatusValue"]))
                         {
                             continue;
                         }
 
-                        await _alertEngine.ProcessSigninLogAsync(
+                        await _alertEngine.ProcessAzureActivityLogAsync(
                             GetTimestamp(row["TimeGenerated"]),
-                            row["UserPrincipalName"]?.ToString() ?? "",
-                            row["IPAddress"]?.ToString() ?? "",
-                            row["AppDisplayName"]?.ToString() ?? "",
-                            row["Location"]?.ToString() ?? "",
-                            row["DeviceDetail"]?.ToString() ?? "",
-                            row["ConditionalAccessStatus"]?.ToString() ?? "",
-                            row["ResultType"]?.ToString() ?? "",
-                            row["ResultDescription"]?.ToString() ?? "",
-                            stoppingToken
-                        );
-                    }
-
-                    // 6. Process AuditLogs
-                    var auditLogs = results[5].Value.Table;
-                    foreach (var row in auditLogs.Rows) {
-                        if (!ShouldProcess("AuditLogs",
-                            row["TimeGenerated"],
-                            row["ActivityDisplayName"],
-                            row["Identity"],
-                            row["Result"],
-                            row["TargetResources"]))
-                        {
-                            continue;
-                        }
-
-                        await _alertEngine.ProcessAuditLogAsync(
-                            GetTimestamp(row["TimeGenerated"]),
-                            row["ActivityDisplayName"]?.ToString() ?? "",
-                            row["Category"]?.ToString() ?? "",
-                            row["Identity"]?.ToString() ?? "",
-                            row["LoggedByService"]?.ToString() ?? "",
-                            row["Result"]?.ToString() ?? "",
-                            row["ResultDescription"]?.ToString() ?? "",
-                            row["TargetResources"]?.ToString() ?? "",
-                            stoppingToken
-                        );
-                    }
-
-                    // 7. Process AADRiskyUsers
-                    var riskyUsers = results[6].Value.Table;
-                    foreach (var row in riskyUsers.Rows) {
-                        if (!ShouldProcess("AADRiskyUsers",
-                            row["TimeGenerated"],
-                            row["UserPrincipalName"],
-                            row["RiskLevel"],
-                            row["RiskState"],
-                            row["RiskDetail"]))
-                        {
-                            continue;
-                        }
-
-                        await _alertEngine.ProcessRiskyUserAsync(
-                            GetTimestamp(row["TimeGenerated"]),
-                            row["UserPrincipalName"]?.ToString() ?? "",
-                            row["UserDisplayName"]?.ToString() ?? "",
-                            row["RiskLevel"]?.ToString() ?? "",
-                            row["RiskState"]?.ToString() ?? "",
-                            row["RiskDetail"]?.ToString() ?? "",
-                            stoppingToken
-                        );
-                    }
-
-                    // 8. Process AADUserRiskEvents
-                    var riskEvents = results[7].Value.Table;
-                    foreach (var row in riskEvents.Rows) {
-                        if (!ShouldProcess("AADUserRiskEvents",
-                            row["TimeGenerated"],
-                            row["UserPrincipalName"],
-                            row["RiskEventType"],
-                            row["RiskLevel"],
-                            row["RiskState"],
-                            row["IpAddress"]))
-                        {
-                            continue;
-                        }
-
-                        await _alertEngine.ProcessUserRiskEventAsync(
-                            GetTimestamp(row["TimeGenerated"]),
-                            row["UserPrincipalName"]?.ToString() ?? "",
-                            row["UserDisplayName"]?.ToString() ?? "",
-                            row["RiskEventType"]?.ToString() ?? "",
-                            row["RiskLevel"]?.ToString() ?? "",
-                            row["RiskState"]?.ToString() ?? "",
-                            row["RiskDetail"]?.ToString() ?? "",
-                            row["IpAddress"]?.ToString() ?? "",
-                            row["Location"]?.ToString() ?? "",
+                            row["Caller"]?.ToString() ?? "",
+                            row["OperationNameValue"]?.ToString() ?? "",
+                            row["_ResourceId"]?.ToString() ?? "",
+                            row["ActivityStatusValue"]?.ToString() ?? "",
+                            $"IP: {row["CallerIpAddress"]?.ToString() ?? "Unknown"}",
                             stoppingToken
                         );
                     }
@@ -252,12 +167,12 @@ public class LogAnalyticsPoller : BackgroundService
                     await _hubContext.Clients.Group("security-team").SendAsync("pollStatus", new { status = "success", timestamp = DateTime.UtcNow }, stoppingToken);
                 }
             }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error querying log analytics.");
-                }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error querying log analytics.");
+            }
 
-            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
         }
     }
 

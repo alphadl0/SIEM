@@ -265,8 +265,8 @@ export default function Dashboard() {
           <table className="contrast-table-head overview-feed-table">
             <thead>
               <tr>
-                <th>TIME</th>
-                <th>USE CASE</th>
+                <th>TIMESTAMP</th>
+                <th>NAME</th>
                 <th>SOURCE</th>
                 <th>SOURCE IP</th>
                 <th>SEVERITY</th>
@@ -295,8 +295,8 @@ export default function Dashboard() {
                     >
                       {new Date(alert.timestamp).toLocaleTimeString()}
                     </td>
-                    <td className="overview-feed-cell overview-feed-strong" title={alert.useCaseId}>
-                      {alert.useCaseId}
+                    <td className="overview-feed-cell overview-feed-strong" title={alert.title}>
+                      {alert.title}
                     </td>
                     <td className="overview-feed-cell" title={alert.vm}>
                       <span className="badge neutral overview-feed-truncate">{alert.vm}</span>

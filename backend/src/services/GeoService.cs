@@ -34,11 +34,11 @@ public class GeoService
 {
     private static readonly Regex PrivateIp = new(@"^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)", RegexOptions.Compiled);
     private readonly ConcurrentDictionary<string, GeoInfo> _cache = new();
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public GeoService(HttpClient httpClient)
+    public GeoService(IHttpClientFactory httpClientFactory)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<GeoInfo> LookupAsync(string ip)
@@ -56,7 +56,8 @@ public class GeoService
 
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<IpApiResponse>($"http://ip-api.com/json/{ip}?fields=city,country,countryCode,isp,lat,lon,status");
+            var client = _httpClientFactory.CreateClient();
+            var res = await client.GetFromJsonAsync<IpApiResponse>($"http://ip-api.com/json/{ip}?fields=city,country,countryCode,isp,lat,lon,status");
             var geo = new GeoInfo
             {
                 Ip = ip,

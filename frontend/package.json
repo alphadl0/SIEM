@@ -12,8 +12,11 @@
   "dependencies": {
     "@azure/msal-browser": "^5.6.3",
     "@azure/msal-react": "^5.2.1",
+    "@kusto/monaco-kusto": "^14.1.0",
     "@microsoft/signalr": "^10.0.0",
+    "@monaco-editor/react": "^4.7.0",
     "lucide-react": "^1.7.0",
+    "monaco-editor": "^0.55.1",
     "prop-types": "^15.8.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

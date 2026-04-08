@@ -112,6 +112,11 @@ export function getKnownBackendUrls() {
 
   addKnownUrl(urls, storedUrl);
   addKnownUrl(urls, configuredUrl);
+  
+  if (typeof window !== "undefined" && window.location.origin) {
+    addKnownUrl(urls, window.location.origin);
+  }
+
   addKnownUrl(urls, DEFAULT_BACKEND_URL);
 
   if (host === "localhost" || host === "127.0.0.1") {

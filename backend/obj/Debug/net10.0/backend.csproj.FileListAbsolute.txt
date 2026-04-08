@@ -59,3 +59,9 @@ C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\backend.csproj.Up
 C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\backend.dll
 C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\refint\backend.dll
 C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\backend.pdb
+C:\Users\mamad\OneDrive\Desktop\SIEM\backend\bin\Debug\net10.0\backend.deps.json
+C:\Users\mamad\OneDrive\Desktop\SIEM\backend\bin\Debug\net10.0\backend.runtimeconfig.json
+C:\Users\mamad\OneDrive\Desktop\SIEM\backend\bin\Debug\net10.0\backend.dll
+C:\Users\mamad\OneDrive\Desktop\SIEM\backend\bin\Debug\net10.0\backend.pdb
+C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\backend.genruntimeconfig.cache
+C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\ref\backend.dll

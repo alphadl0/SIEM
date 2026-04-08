@@ -137,6 +137,9 @@ if (!app.Environment.IsDevelopment())
 
 app.UseCors("FrontendPolicy");
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -271,6 +274,8 @@ app.MapPost("/api/search", async ([Microsoft.AspNetCore.Mvc.FromBody] SearchRequ
 }).RequireAuthorization("SecurityTeamPolicy");
 
 app.MapHub<SiemHub>("/hub").RequireAuthorization("SecurityTeamPolicy");
+
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

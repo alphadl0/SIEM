@@ -7,9 +7,17 @@ import { Pagination } from '../components/Pagination';
 
 const PAGE_SIZE = 50;
 
+export interface ProcessRecord {
+  TimeGenerated: string;
+  Computer: string;
+  NewProcessName: string;
+  CommandLine: string;
+  Account: string;
+}
+
 export default function ProcessMonitor() {
   const { instance, accounts } = useMsal();
-  const [procs, setProcs] = useState<Record<string, any>[]>([]);
+  const [procs, setProcs] = useState<ProcessRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,7 +49,7 @@ export default function ProcessMonitor() {
           | order by TimeGenerated desc
           | take 1000
         `.trim();
-        const data = await fetchApiJson<Record<string, any>[]>(
+        const data = await fetchApiJson<ProcessRecord[]>(
           instance,
           accounts[0],
           `/api/search`,
@@ -182,3 +190,4 @@ export default function ProcessMonitor() {
     </div>
   );
 }
+

@@ -31,61 +31,59 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside className={`sidebar ${isSidebarOpen ? '' : 'closed'}`} style={{ width: isSidebarOpen ? '250px' : '70px', transition: 'width 0.3s ease', overflowX: 'hidden' }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.8rem", marginBottom: "2.5rem", padding: "0 1rem" }}>
-           <img src="/logo.png" alt="Logo" style={{ width: "35px", height: "35px" }} />
-             <h4 className="sidebar-title" style={{ color: "white", margin: 0, fontWeight: 700, fontSize: "0.9rem", transition: "opacity 0.2s" }}>SIEM Portal</h4>
+      <aside className={`sidebar ${isSidebarOpen ? '' : 'closed'}`}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: "2.5rem", padding: "0 0.5rem" }}>
+           <img src="/logo.png" alt="Logo" style={{ width: "30px", height: "30px", flexShrink: 0 }} />
+             <h4 className="sidebar-title" style={{ color: "white", margin: 0, fontWeight: 700, fontSize: "0.85rem" }}>SIEM Portal</h4>
           </div>
-        <nav style={{ flex: 1 }}>
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <NavLink to="/dashboard" data-title="Overview" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <LayoutDashboard size={18} className="nav-icon" /> <span className="nav-text" style={{ transition: "opacity 0.2s" }}>Overview</span>
+            <LayoutDashboard size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Overview</span>
           </NavLink>
           <NavLink to="/alerts" data-title="Security Incidents" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <ShieldAlert size={18} className="nav-icon" /> <span className="nav-text" style={{ transition: "opacity 0.2s" }}>Security Incidents</span>
+            <ShieldAlert size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Security Incidents</span>
           </NavLink>
           <NavLink to="/access-log" data-title="Identity Logs" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <CircleUserRound size={18} className="nav-icon" /> <span className="nav-text" style={{ transition: "opacity 0.2s" }}>Identity Logs</span>
+            <CircleUserRound size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Identity Logs</span>
           </NavLink>
           <NavLink to="/processes" data-title="Forensic Processes" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Activity size={18} className="nav-icon" /> <span className="nav-text" style={{ transition: "opacity 0.2s" }}>Forensic Processes</span>
+            <Activity size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Forensic Processes</span>
           </NavLink>
           <NavLink to="/infrastructure-assets" data-title="Infrastructure Assets" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Database size={18} className="nav-icon" /> <span className="nav-text" style={{ transition: "opacity 0.2s" }}>Infrastructure Assets</span>
+            <Database size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Infrastructure Assets</span>
           </NavLink>          <NavLink to="/azure-activity" data-title="Azure Activity" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <CloudRain size={18} className="nav-icon" /> <span className="nav-text" style={{ transition: "opacity 0.2s" }}>Azure Activity</span>
+            <CloudRain size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Azure Activity</span>
           </NavLink>          <NavLink to="/search" data-title="KQL Log Explorer" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Search size={18} className="nav-icon" /> <span className="nav-text" style={{ transition: "opacity 0.2s" }}>KQL Log Explorer</span>
+            <Search size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>KQL Log Explorer</span>
           </NavLink>
         </nav>
+        <div style={{ padding: "0 0.5rem 1rem 0.5rem", marginTop: "auto", display: "flex", justifyContent: "center" }}>
+          <button className="btn-no-anim toggle-nav-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={isSidebarOpen ? "Collapse menu" : "Expand menu"}
+            style={{
+              cursor: "pointer",
+              marginBottom: 0,
+              gap: 0,
+              justifyContent: "center",
+              width: "40px",
+              height: "40px",
+              padding: 0,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.1)",
+              border: "none",
+              color: "white"
+            }}
+          >
+            <div style={{ display: "flex", transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)", transform: isSidebarOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+              <ChevronRight size={16} color="currentColor" style={{ marginLeft: "-2px" }} />
+              <ChevronRight size={16} color="currentColor" style={{ marginLeft: "-8px", marginRight: "-2px" }} />
+            </div>
+          </button>
+        </div>
       </aside>
-      <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+      <main style={{ flex: 1, overflowY: 'auto', overflowX: 'visible' }}>
         <header style={{ height: '55px', background: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-                
-<button className="btn-no-anim" onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-    style={{
-      background: "transparent",
-      border: "1px solid #e2e8f0",
-        display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "6px",
-      marginRight: "12px",
-      cursor: "pointer",
-      color: "var(--text-muted)",
-      borderRadius: "6px",
-      transition: "background 0.2s, color 0.2s"
-    }}
-    onMouseOver={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "var(--primary)"; }}
-    onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
-    title="Toggle Sidebar"
-  >
-    <div style={{ display: "flex", paddingLeft: "6px", paddingRight: "2px", transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)", transform: isSidebarOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
-      <ChevronRight size={20} color="currentColor" style={{ marginLeft: "-6px" }} />
-      <ChevronRight size={20} color="currentColor" style={{ marginLeft: "-10px" }} />
-      <ChevronRight size={20} color="currentColor" style={{ marginLeft: "-10px" }} />
-    </div>
-  </button>
                 <h2 style={{ fontSize: '1rem', margin: 0, color: 'var(--primary)', fontWeight: 700 }}>Secunary SIEM Dashboard</h2>
             </div>
             
@@ -217,6 +215,17 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
 
 
 

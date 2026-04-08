@@ -7,15 +7,15 @@ import * as monaco from 'monaco-editor';
 import { Pagination } from '../components/Pagination';
 
 // Set up KQL Worker Environment
-// @ts-ignore
+
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';    
-// @ts-ignore
+
 import kustoWorker from '@kusto/monaco-kusto/release/esm/kusto.worker?worker';  
 import '@kusto/monaco-kusto';
 import { getKustoWorker } from '@kusto/monaco-kusto';
 
 self.MonacoEnvironment = {
-  getWorker(_: any, label: string) {
+  getWorker(_: unknown, label: string) {
     if (label === 'kusto') return new kustoWorker();
     return new editorWorker();
   },
@@ -28,7 +28,7 @@ const PAGE_SIZE = 10;
 export default function SecuritySearch() {
   const { instance, accounts } = useMsal();
   const [query, setQuery] = useState('SecurityEvent | take 20');
-  const [results, setResults] = useState<Record<string, any>[]>([]);
+  const [results, setResults] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -41,7 +41,7 @@ export default function SecuritySearch() {
     setLoading(true);
 
     try {
-      const data = await fetchApiJson<Record<string, any>[]>(
+      const data = await fetchApiJson<Record<string, unknown>[]>(
         instance,
         accounts[0],
         `/api/search`,
@@ -91,12 +91,12 @@ export default function SecuritySearch() {
             onMount={(editor) => {
               if (!accounts[0]) return;
           
-              fetchApiJson<any>(instance, accounts[0], '/api/schema')
+              fetchApiJson<{tables?: {name: string, description?: string, columns?: {name: string, type?: string}[]}[]}>(instance, accounts[0], '/api/schema')
                 .then(schemaInfo => {
-                  const tables = (schemaInfo?.tables || []).map((t: any) => ({
+                  const tables = (schemaInfo?.tables || []).map((t: {name: string, description?: string, columns?: {name: string, type?: string}[]}) => ({
                     name: t.name,
                     docstring: t.description || "",
-                    columns: (t.columns || []).map((c: any) => ({
+                    columns: (t.columns || []).map((c: {name: string, type?: string}) => ({
                         name: c.name,
                         type: c.type || "string"
                     }))
@@ -181,3 +181,7 @@ export default function SecuritySearch() {
     </div>
   );
 }
+
+
+
+

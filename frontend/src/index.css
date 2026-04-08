@@ -56,6 +56,48 @@ body {
   padding: 0;
 }
 
+/* --- UTILITIES --- */
+
+/* Typography */
+.text-primary   { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }
+.text-critical  { color: var(--destructive); }
+.text-success   { color: var(--secondary); }
+
+.text-xs { font-size: 0.65rem; }
+.text-sm { font-size: 0.8rem; }
+.text-md { font-size: 1rem; }
+.text-lg { font-size: 1.4rem; }
+.text-xl { font-size: 1.5rem; }
+
+.font-medium   { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold     { font-weight: 700; }
+
+/* Layout & Flexbox */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+
+/* Spacing */
+.m-0 { margin: 0; }
+.mb-sm { margin-bottom: 0.5rem; }
+.mb-md { margin-bottom: 1rem; }
+.mb-lg { margin-bottom: 1.5rem; }
+.mb-xl { margin-bottom: 2rem; }
+
+/* Text Alignment */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
 .sidebar {
   width: 250px;
   background: var(--primary);
@@ -115,27 +157,27 @@ body {
 .dashboard-summary-card {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.72rem 0.92rem;
+  gap: 0.6rem;
+  padding: 0.45rem 0.75rem;
 }
 
 .dashboard-summary-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   flex: 0 0 auto;
 }
 
 .dashboard-summary-label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   line-height: 1.2;
 }
 
 .dashboard-summary-value {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   line-height: 1.1;
 }
 
@@ -614,7 +656,7 @@ tbody td {
   display: flex !important;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   background: var(--primary) !important;
   border-radius: 12px;
   transition: all 0.2s ease;

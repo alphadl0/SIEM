@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace backend.src;
 
 public sealed record PagedResult<T>(

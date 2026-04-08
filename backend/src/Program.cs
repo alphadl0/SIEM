@@ -13,6 +13,7 @@ using Azure.ResourceManager.Compute;
 using Azure.ResourceManager.Compute.Models;
 using Azure.ResourceManager.Resources;
 using backend.src.services;
+using Microsoft.Extensions.Logging;
 
 DotNetEnv.Env.Load();
 
@@ -138,11 +139,13 @@ app.UseCors("FrontendPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/alerts", async (int? page, int? pageSize, backend.src.services.AlertHistoryService historyService, CancellationToken cancellationToken) =>
+app.MapGet("/api/alerts", async (int? page, int? pageSize, string? searchTerm, string? severity, backend.src.services.AlertHistoryService historyService, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
 {
+    var logger = loggerFactory.CreateLogger("AlertsApi");
+    logger.LogInformation("Fetch alerts: page={Page}, size={Size}, search='{Search}', severity='{Severity}'", page, pageSize, searchTerm, severity);
     var normalizedPage = NormalizePage(page);
     var normalizedPageSize = NormalizePageSize(pageSize, 25);
-    var result = await historyService.GetPagedAlertsAsync(normalizedPage, normalizedPageSize, cancellationToken);
+    var result = await historyService.GetPagedAlertsAsync(normalizedPage, normalizedPageSize, searchTerm, severity, cancellationToken);
     return Results.Ok(result);
 }).RequireAuthorization("SecurityTeamPolicy");
 
@@ -179,8 +182,10 @@ app.MapGet("/api/vm-statuses", async (VmRunCommandService vmRunCommandService, D
     return Results.Ok(vmStatuses);
 }).RequireAuthorization("SecurityTeamPolicy");
 
-app.MapGet("/api/signin-logs", async (int? page, int? pageSize, LogsQueryClient client, CancellationToken cancellationToken) =>
+app.MapGet("/api/signin-logs", async (int? page, int? pageSize, string? searchTerm, string? status, LogsQueryClient client, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
 {
+    var logger = loggerFactory.CreateLogger("SigninLogsApi");
+    logger.LogInformation("Fetch signin-logs: page={Page}, size={Size}, search='{Search}', status='{Status}'", page, pageSize, searchTerm, status);
     var workspaceId = CleanSetting(GetSetting(builder.Configuration, "LOG_ANALYTICS_WORKSPACE_ID"));
 
     if (string.IsNullOrWhiteSpace(workspaceId))
@@ -195,13 +200,13 @@ app.MapGet("/api/signin-logs", async (int? page, int? pageSize, LogsQueryClient 
 
     var response = await client.QueryWorkspaceAsync(
         workspaceId,
-        SigninLogsQueries.GetRecentLogsPageQuery(skip, normalizedPageSize),
+        SigninLogsQueries.GetRecentLogsPageQuery(skip, normalizedPageSize, searchTerm, status),
         timeRange,
         cancellationToken: cancellationToken);
 
     var totalResponse = await client.QueryWorkspaceAsync(
         workspaceId,
-        SigninLogsQueries.GetRecentLogsCountQuery(),
+        SigninLogsQueries.GetRecentLogsCountQuery(searchTerm, status),
         timeRange,
         cancellationToken: cancellationToken);
 

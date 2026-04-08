@@ -47,6 +47,8 @@ export interface AlertEvent {
     country: string;
     city: string;
     isp: string;
+    lat?: number;
+    lon?: number;
   };
 }
 
@@ -157,6 +159,7 @@ function useProvideSignalR(): SignalRState {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account?.homeAccountId, instance]);
 
   useEffect(() => {
@@ -182,11 +185,13 @@ function useProvideSignalR(): SignalRState {
     };
 
     if (!account) {
-      setVmStatuses({});
-      setAlerts([]);
-      setLastPoll(null);
-      setConnectionStatus("Idle");
-      setConnectionError(null);
+      setTimeout(() => {
+        setVmStatuses({});
+        setAlerts([]);
+        setLastPoll(null);
+        setConnectionStatus("Idle");
+        setConnectionError(null);
+      }, 0);
       void stopConnection();
       return;
     }
@@ -261,6 +266,7 @@ function useProvideSignalR(): SignalRState {
       cancelled = true;
       void stopConnection();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account?.homeAccountId, instance]);
 
   return useMemo(

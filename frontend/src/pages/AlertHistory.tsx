@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { ShieldAlert } from 'lucide-react';
 import { useSignalR, type AlertEvent } from '../hooks/useSignalR';
 import { fetchApiJson, type PagedResponse } from '../lib/backend';
+import { FilterBar } from '../components/FilterBar';
+import { Pagination } from '../components/Pagination';
 
 const PAGE_SIZE = 25;
 
@@ -14,56 +16,92 @@ export default function AlertHistory() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [severity, setSeverity] = useState('all');
+
+  const fetchHistory = useCallback(async () => {
+    if (!accounts[0]) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const url = `/api/alerts?page=${page}&pageSize=${PAGE_SIZE}&searchTerm=${encodeURIComponent(searchTerm)}&severity=${severity}`;
+      const data = await fetchApiJson<PagedResponse<AlertEvent>>(
+        instance,
+        accounts[0],
+        url
+      );
+      setAlerts(data.items);
+      setTotalCount(data.totalCount);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load alert history', err);
+      setError(err instanceof Error ? err.message : 'Failed to load alert history.');
+    } finally {
+      setLoading(false);
+    }
+  }, [instance, accounts, page, searchTerm, severity]);
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      if (!accounts[0]) {
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const data = await fetchApiJson<PagedResponse<AlertEvent>>(
-          instance,
-          accounts[0],
-          `/api/alerts?page=${page}&pageSize=${PAGE_SIZE}`,
-        );
-        setAlerts(data.items);
-        setTotalCount(data.totalCount);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to load alert history', err);
-        setError(err instanceof Error ? err.message : 'Failed to load alert history.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (accounts.length > 0) {
       void fetchHistory();
     }
-  }, [instance, accounts, page]);
+  }, [fetchHistory, accounts.length]);
 
-  const displayedAlerts = alerts.length > 0 ? alerts : page === 1 ? liveAlerts : [];
+  const onSearch = useCallback((val: string) => {
+    setSearchTerm(val);
+    setPage(1); // Reset to first page
+  }, []);
+
+  const onFilterChange = useCallback((key: string, val: string) => {
+    if (key === 'severity') {
+      setSeverity(val);
+      setPage(1);
+    }
+  }, []);
+
+  const displayedAlerts = (alerts.length > 0 || searchTerm !== '' || severity !== 'all') ? alerts : (page === 1 ? liveAlerts : []);
   const effectiveTotalCount = totalCount > 0 ? totalCount : displayedAlerts.length;
   const totalPages = Math.max(1, Math.ceil(effectiveTotalCount / PAGE_SIZE));
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ margin: 0 }}><ShieldAlert size={32} style={{ verticalAlign: 'middle', marginRight: '0.8rem' }} /> Security Incidents</h1>
+    <div className="fade-in">
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><ShieldAlert size={32} /> Security Incidents</h1>
       </div>
 
+      <FilterBar 
+        onSearch={onSearch}
+        onFilterChange={onFilterChange}
+        placeholder="Filter by Source, Use Case or ID..."
+        filters={[
+          {
+            key: 'severity',
+            label: 'Severity',
+            value: severity,
+            options: [
+              { label: 'All Levels', value: 'all' },
+              { label: 'Critical', value: 'Critical' },
+              { label: 'High', value: 'High' },
+              { label: 'Medium', value: 'Medium' },
+              { label: 'Low', value: 'Low' }
+            ]
+          }
+        ]}
+      />
+
       <div className="card">
-        {error && displayedAlerts.length === 0 && <p style={{ color: '#b91c1c' }}>{error}</p>}
-        {loading ? <p>Loading history...</p> : (
+        {error && displayedAlerts.length === 0 && <p className="text-critical">{error}</p>}
+        {(loading && alerts.length === 0) ? <p>Loading history...</p> : (
           <table className="contrast-table-head incident-table">
             <thead>
               <tr>
                 <th>TIMESTAMP</th>
                 <th>USE CASE</th>
                 <th>SEVERITY</th>
-                <th>VM</th>
+                <th>SOURCE</th>
                 <th>DESCRIPTION</th>
               </tr>
             </thead>
@@ -82,18 +120,25 @@ export default function AlertHistory() {
                     </span>
                   </td>
                   <td className="incident-cell" title={alert.vm}>
-                    <span className="incident-truncate">{alert.vm}</span>
+                    <span className="badge neutral incident-truncate">{alert.vm}</span>
                   </td>
                   <td className="incident-cell" title={alert.description}>
                     <span className="incident-truncate">{alert.description}</span>
                   </td>
                 </tr>
               ))}
+              {displayedAlerts.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={5} className="text-center text-muted" style={{ padding: '2rem' }}>
+                    No matching incidents found for your filter criteria.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
         {!loading && effectiveTotalCount > PAGE_SIZE && (
-          <PaginationBar
+          <Pagination
             page={page}
             totalPages={totalPages}
             totalCount={effectiveTotalCount}
@@ -106,48 +151,3 @@ export default function AlertHistory() {
   );
 }
 
-function PaginationBar({
-  page,
-  totalPages,
-  totalCount,
-  pageSize,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  totalCount: number;
-  pageSize: number;
-  onPageChange: (page: number) => void;
-}) {
-  const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, totalCount);
-
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-        Showing {start}-{end} of {totalCount}
-      </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <button
-          className="btn-outline"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          style={{ opacity: page <= 1 ? 0.45 : 1 }}
-        >
-          Previous
-        </button>
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: '72px', textAlign: 'center' }}>
-          Page {page} / {totalPages}
-        </span>
-        <button
-          className="btn-outline"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
-          style={{ opacity: page >= totalPages ? 0.45 : 1 }}
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
-}

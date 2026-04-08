@@ -6,7 +6,7 @@ import { fetchApiJson } from '../lib/backend';
 export default function SecuritySearch() {
   const { instance, accounts } = useMsal();
   const [query, setQuery] = useState('SecurityEvent | take 20');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +18,7 @@ export default function SecuritySearch() {
     setLoading(true);
 
     try {
-      const data = await fetchApiJson<any[]>(
+      const data = await fetchApiJson<Record<string, unknown>[]>(
         instance,
         accounts[0],
         `/api/search?query=${encodeURIComponent(query)}`,
@@ -35,26 +35,27 @@ export default function SecuritySearch() {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}><Search size={28} style={{ verticalAlign: 'middle', marginRight: '0.8rem' }} /> KQL Log Explorer</h1>
+    <div className="fade-in">
+      <div className="flex justify-between items-center mb-md">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><Search size={28} /> KQL Log Explorer</h1>
       </div>
       
-      <div className="card" style={{marginBottom: '1.5rem'}}>
-        <h3 style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem'}}><Terminal size={20}/> KQL Query Editor</h3>
+      <div className="card mb-lg">
+        <h3 className="flex items-center gap-sm mb-md text-primary"><Terminal size={20}/> KQL Query Editor</h3>
         <textarea 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{ width: '100%', height: '100px', background: '#1e293b', color: '#e2e8f0', border: 'none', padding: '1rem', borderRadius: '8px', fontFamily: 'monospace', marginBottom: '1rem' }}
+          style={{ width: '100%', height: '100px', background: '#1e293b', color: '#e2e8f0', border: 'none', padding: '1rem', borderRadius: '8px', fontFamily: 'monospace' }}
+          className="mb-md"
         />
-        <button className="btn" onClick={handleSearch} disabled={loading} style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+        <button className="btn flex items-center gap-sm" onClick={handleSearch} disabled={loading}>
           <Play size={18}/> {loading ? 'Running...' : 'Execute Query'}
         </button>
       </div>
 
-      <div className="card" style={{overflowX: 'auto'}}>
-        <h3>Results ({results.length})</h3>
-        {error && <p style={{ color: '#b91c1c' }}>{error}</p>}
+      <div className="card" style={{ overflowX: 'auto' }}>
+        <h3 className="text-primary mb-md">Results ({results.length})</h3>
+        {error && <p className="text-critical">{error}</p>}
         {results.length > 0 ? (
           <table>
             <thead>
@@ -65,12 +66,12 @@ export default function SecuritySearch() {
             <tbody>
               {results.map((row, i) => (
                 <tr key={i}>
-                  {Object.values(row).map((v: any, j) => <td key={j} style={{fontSize: '0.8rem'}}>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</td>)}
+                  {Object.values(row).map((v: unknown, j) => <td key={j} className="text-sm">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</td>)}
                 </tr>
               ))}
             </tbody>
           </table>
-        ) : <p style={{color: 'var(--text-muted)'}}>No results. Enter a KQL query and click Execute.</p>}
+        ) : <p className="text-muted">No results. Enter a KQL query and click Execute.</p>}
       </div>
     </div>
   );

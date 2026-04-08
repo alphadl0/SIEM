@@ -1,16 +1,49 @@
+import { useState } from 'react';
 import { useSignalR } from '../hooks/useSignalR';
 import { Server, Activity, MapPin, Cpu, CheckCircle, Network, Globe, HardDrive } from 'lucide-react';
 import { getVmAssetLabel, getVmBadgeTone, isVmRunning } from '../lib/vmStatus';
+import { FilterBar } from '../components/FilterBar';
 
 export default function AssetExplorer() {
   const { vmStatuses } = useSignalR();
-  const vms = Object.values(vmStatuses);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [status, setStatus] = useState('all');
+
+  const vms = Object.values(vmStatuses).filter(vm => {
+    const matchesSearch = !searchTerm || 
+      vm.vmName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vm.osLabel?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = status === 'all' || 
+      (status === 'running' && isVmRunning(vm.status)) ||
+      (status === 'stopped' && !isVmRunning(vm.status));
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="fade-in">
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}><Server size={28} style={{ verticalAlign: 'middle', marginRight: '0.8rem' }} /> Infrastructure Assets</h1>
+      <div className="mb-lg">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><Server size={28} /> Infrastructure Assets</h1>
       </div>
+
+      <FilterBar 
+        onSearch={setSearchTerm}
+        onFilterChange={(key, val) => key === 'status' && setStatus(val)}
+        placeholder="Filter by VM name or OS..."
+        filters={[
+          {
+            key: 'status',
+            label: 'Power Status',
+            value: status,
+            options: [
+              { label: 'All Assets', value: 'all' },
+              { label: 'Running', value: 'running' },
+              { label: 'Stopped', value: 'stopped' }
+            ]
+          }
+        ]}
+      />
       
       <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))', gap: '0.75rem' }}>
         {vms.length > 0 ? vms.map((vm, i) => (
@@ -20,11 +53,11 @@ export default function AssetExplorer() {
             style={{ borderLeft: `4px solid ${isVmRunning(vm.status) ? 'var(--secondary)' : 'var(--destructive)'}` }}
           >
             <div className="asset-card-header">
-              <div className="asset-card-type">
-                <Cpu size={18} color="#64748b" />
+              <div className="asset-card-type text-muted">
+                <Cpu size={18} className="text-muted" />
                 <span>VIRTUAL MACHINE</span>
               </div>
-              <span className={`badge ${getVmBadgeTone(vm.status)}`} style={{ fontSize: '0.6rem' }}>
+              <span className={`badge ${getVmBadgeTone(vm.status)} text-xs`}>
                 {getVmAssetLabel(vm.status)}
               </span>
             </div>
@@ -33,30 +66,30 @@ export default function AssetExplorer() {
             
             <div className="asset-card-panel">
                 <div className="asset-card-details">
-                    <DetailItem icon={<MapPin size={18} color="#64748b" />} label="Region" value={vm.location || 'N/A'} />
-                    <DetailItem icon={<Activity size={18} color="#64748b" />} label="VM Size" value={vm.vmSize || 'Standard'} />
-                    <DetailItem icon={<Network size={18} color="#64748b" />} label="Private IP" value={formatAddress(vm.privateIpAddress, 'Unavailable')} />
-                    <DetailItem icon={<Globe size={18} color="#64748b" />} label="Public IP" value={formatAddress(vm.publicIpAddress, 'Not assigned')} />
+                    <DetailItem icon={<MapPin size={18} />} label="Region" value={vm.location || 'N/A'} />
+                    <DetailItem icon={<Activity size={18} />} label="VM Size" value={vm.vmSize || 'Standard'} />
+                    <DetailItem icon={<Network size={18} />} label="Private IP" value={formatAddress(vm.privateIpAddress, 'Unavailable')} />
+                    <DetailItem icon={<Globe size={18} />} label="Public IP" value={formatAddress(vm.publicIpAddress, 'Not assigned')} />
                     <DetailItem
-                      icon={<Cpu size={18} color="#64748b" />}
+                      icon={<Cpu size={18} />}
                       label="OS"
                       value={formatOsLabel(vm.osLabel, vm.osVersion)}
                     />
                     <DetailItem
-                      icon={<Activity size={18} color="#64748b" />}
+                      icon={<Activity size={18} />}
                       label="RAM"
                       value={formatMemory(vm.memoryUsedGb, vm.memoryTotalGb)}
                     />
                     <DetailItem
-                      icon={<HardDrive size={18} color="#64748b" />}
+                      icon={<HardDrive size={18} />}
                       label="Disk"
                       value={formatDisk(vm.diskUsedGb, vm.diskTotalGb)}
                     />
                     <DetailItem
-                      icon={<CheckCircle size={18} color="#228B22" />}
+                      icon={<CheckCircle size={18} className="text-success" />}
                       label="SIEM Agent Health"
                       value="CONNECTED"
-                      valueColor="#228B22"
+                      valueColor="var(--secondary)"
                     />
                 </div>
             </div>
@@ -85,7 +118,7 @@ function DetailItem({
   return (
     <div className={`asset-detail-row${stacked ? ' asset-detail-row-stacked' : ''}${wrapValue && !stacked ? ' asset-detail-row-wrap' : ''}`}>
       <div className="asset-detail-label" title={label}>
-        <div style={{ minWidth: '28px', display: 'flex', justifyContent: 'center' }}>
+        <div className="flex justify-center text-muted" style={{ minWidth: '28px' }}>
           {icon}
         </div>
         <span>{label}</span>

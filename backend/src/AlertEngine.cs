@@ -79,7 +79,11 @@ public class AlertEngine
         {
             var ipMatch = Regex.Match(message, @"\b(?:\d{1,3}\.){3}\d{1,3}\b");
             string ip = ipMatch.Success ? ipMatch.Value : "Unknown";
-            await CreateAlert(timestamp, "UC2", "Brute Force Attempt (Linux)", "High", hostName, ip, "Failed SSH login attempt detected in syslog", ct, broadcast);
+            
+            var userMatch = Regex.Match(message, @"Failed password for (?:invalid user )?(?<user>\S+)");
+            string user = userMatch.Success ? userMatch.Groups["user"].Value : "Unknown";
+            
+            await CreateAlert(timestamp, "UC2", "Brute Force Attempt (Linux)", "High", hostName, ip, $"Failed SSH login attempt for user '{user}' detected in syslog.", ct, broadcast);
         }
 
         if (message.Contains("new user", StringComparison.OrdinalIgnoreCase) && message.Contains("name=", StringComparison.OrdinalIgnoreCase))
@@ -167,21 +171,38 @@ public class AlertEngine
         }
     }
 
-    public PagedResult<Alert> GetRecentAlertsPage(int page, int pageSize)
+    public PagedResult<Alert> GetRecentAlertsPage(int page, int pageSize, string? searchTerm = null, string? severity = null)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        Alert[] orderedAlerts;
+        Alert[] filteredAlerts;
         lock (_alertsSync)
         {
-            orderedAlerts = _alerts.Values
+            var query = _alerts.Values.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(severity) && !string.Equals(severity, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(a => string.Equals(a.Severity, severity, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var searchLower = searchTerm.ToLowerInvariant();
+                query = query.Where(a => 
+                    a.Vm.ToLowerInvariant().Contains(searchLower) || 
+                    a.UseCaseId.ToLowerInvariant().Contains(searchLower) || 
+                    a.Description.ToLowerInvariant().Contains(searchLower) ||
+                    a.Title.ToLowerInvariant().Contains(searchLower));
+            }
+
+            filteredAlerts = query
                 .OrderByDescending(alert => alert.Timestamp)
                 .ToArray();
         }
 
-        var totalCount = orderedAlerts.Length;
-        var items = orderedAlerts
+        var totalCount = filteredAlerts.Length;
+        var items = filteredAlerts
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToArray();

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { CircleUserRound } from 'lucide-react';
 import { fetchApiJson, type PagedResponse } from '../lib/backend';
+import { FilterBar } from '../components/FilterBar';
 
 const PAGE_SIZE = 25;
 
@@ -28,56 +29,90 @@ export default function AccessLog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [status, setStatus] = useState('all');
+
+  const fetchLogs = useCallback(async () => {
+    if (!accounts[0]) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const url = `/api/signin-logs?page=${page}&pageSize=${PAGE_SIZE}&searchTerm=${encodeURIComponent(searchTerm)}&status=${status}`;
+      const data = await fetchApiJson<PagedResponse<AccessLogRow>>(
+        instance,
+        accounts[0],
+        url
+      );
+      setLogs(data.items);
+      setTotalCount(data.totalCount);
+      setFailedCount(data.failedCount ?? 0);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load sign-in logs', err);
+      setError(err instanceof Error ? err.message : 'Failed to load sign-in logs.');
+    } finally {
+      setLoading(false);
+    }
+  }, [instance, accounts, page, searchTerm, status]);
+
   useEffect(() => {
-    const fetchLogs = async () => {
-      if (!accounts[0]) {
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const data = await fetchApiJson<PagedResponse<AccessLogRow>>(
-          instance,
-          accounts[0],
-          `/api/signin-logs?page=${page}&pageSize=${PAGE_SIZE}`,
-        );
-        setLogs(data.items);
-        setTotalCount(data.totalCount);
-        setFailedCount(data.failedCount ?? 0);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to load sign-in logs', err);
-        setError(err instanceof Error ? err.message : 'Failed to load sign-in logs.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (accounts.length > 0) {
       void fetchLogs();
     }
-  }, [instance, accounts, page]);
+  }, [fetchLogs, accounts.length]);
+
+  const onSearch = useCallback((val: string) => {
+    setSearchTerm(val);
+    setPage(1);
+  }, []);
+
+  const onFilterChange = useCallback((key: string, val: string) => {
+    if (key === 'status') {
+      setStatus(val);
+      setPage(1);
+    }
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="fade-in">
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-         <div className="card" style={{ flex: 1, textAlign: 'center', padding: '1.5rem' }}>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, marginBottom: '0.5rem' }}>TOTAL ATTEMPTS (24H)</p>
-            <h2 style={{ margin: 0 }}>{totalCount}</h2>
+      <div className="flex gap-md mb-xl">
+         <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>
+            <p className="text-xs font-semibold mb-sm text-secondary">TOTAL ATTEMPTS (24H)</p>
+            <h2 className="m-0">{totalCount}</h2>
          </div>
-         <div className="card" style={{ flex: 1, textAlign: 'center', padding: '1.5rem' }}>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, marginBottom: '0.5rem' }}>FAILED SIGN-INS</p>
-            <h2 style={{ margin: 0, color: '#ef4444' }}>{failedCount}</h2>
+         <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>
+            <p className="text-xs font-semibold mb-sm text-secondary">FAILED SIGN-INS</p>
+            <h2 className="m-0 text-critical">{failedCount}</h2>
          </div>
       </div>
 
+      <FilterBar 
+        onSearch={onSearch}
+        onFilterChange={onFilterChange}
+        placeholder="Search users, IPs or applications..."
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            value: status,
+            options: [
+              { label: 'All Statuses', value: 'all' },
+              { label: 'Success', value: 'success' },
+              { label: 'Failed', value: 'failed' }
+            ]
+          }
+        ]}
+      />
+
       <div className="card">
-        <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3 className="flex items-center gap-sm mb-lg text-primary">
             <CircleUserRound size={22} className="text-primary" /> Identity Logs
         </h3>
-        {error && <p style={{ color: '#b91c1c' }}>{error}</p>}
+        {error && <p className="text-critical">{error}</p>}
         {loading ? <p>Analyzing Entra ID logs...</p> : (
           <table className="identity-log-table">
             <thead>
@@ -174,11 +209,11 @@ function PaginationBar({
   const end = Math.min(page * pageSize, totalCount);
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+    <div className="flex justify-between items-center gap-md" style={{ marginTop: '1rem' }}>
+      <p className="m-0 text-sm text-secondary">
         Showing {start}-{end} of {totalCount}
       </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="flex items-center gap-sm">
         <button
           className="btn-outline"
           onClick={() => onPageChange(page - 1)}
@@ -187,7 +222,7 @@ function PaginationBar({
         >
           Previous
         </button>
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: '72px', textAlign: 'center' }}>
+        <span className="text-sm text-secondary text-center" style={{ minWidth: '72px' }}>
           Page {page} / {totalPages}
         </span>
         <button

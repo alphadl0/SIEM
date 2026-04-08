@@ -14,6 +14,8 @@ public class GeoInfo
     public string Country { get; set; } = "";
     public string CountryCode { get; set; } = "";
     public string Isp { get; set; } = "";
+    public double? Lat { get; set; }
+    public double? Lon { get; set; }
     public bool IsPrivate { get; set; }
 }
 
@@ -24,6 +26,8 @@ public class IpApiResponse
     public string countryCode { get; set; } = "";
     public string city { get; set; } = "";
     public string isp { get; set; } = "";
+    public double? lat { get; set; }
+    public double? lon { get; set; }
 }
 
 public class GeoService
@@ -52,7 +56,7 @@ public class GeoService
 
         try
         {
-            var res = await _httpClient.GetFromJsonAsync<IpApiResponse>($"http://ip-api.com/json/{ip}?fields=city,country,countryCode,isp,status");
+            var res = await _httpClient.GetFromJsonAsync<IpApiResponse>($"http://ip-api.com/json/{ip}?fields=city,country,countryCode,isp,lat,lon,status");
             var geo = new GeoInfo
             {
                 Ip = ip,
@@ -60,6 +64,8 @@ public class GeoService
                 Country = res?.status == "success" ? res.country ?? "Unknown" : "Unknown",
                 CountryCode = res?.status == "success" ? res.countryCode ?? "??" : "??",
                 Isp = res?.status == "success" ? res.isp ?? "Unknown" : "Unknown",
+                Lat = res?.status == "success" ? res.lat : null,
+                Lon = res?.status == "success" ? res.lon : null,
                 IsPrivate = false
             };
             _cache[ip] = geo;

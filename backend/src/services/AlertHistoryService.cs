@@ -1,4 +1,5 @@
 using Azure.Monitor.Query;
+using backend.src;
 using backend.src.queries;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -32,10 +33,10 @@ public class AlertHistoryService
             .Replace("\n", string.Empty);
     }
 
-    public async Task<PagedResult<Alert>> GetPagedAlertsAsync(int page, int pageSize, CancellationToken cancellationToken)
+    public async Task<PagedResult<Alert>> GetPagedAlertsAsync(int page, int pageSize, string? searchTerm = null, string? severity = null, CancellationToken cancellationToken = default)
     {
         await EnsureHydratedAsync(cancellationToken);
-        return _alertEngine.GetRecentAlertsPage(page, pageSize);
+        return _alertEngine.GetRecentAlertsPage(page, pageSize, searchTerm, severity);
     }
 
     private async Task EnsureHydratedAsync(CancellationToken cancellationToken)

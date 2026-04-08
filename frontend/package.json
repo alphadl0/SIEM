@@ -14,9 +14,12 @@
     "@azure/msal-react": "^5.2.1",
     "@microsoft/signalr": "^10.0.0",
     "lucide-react": "^1.7.0",
+    "prop-types": "^15.8.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-is": "^19.2.4",
     "react-router-dom": "^7.14.0",
+    "react-simple-maps": "^3.0.0",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
@@ -24,6 +27,7 @@
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/react-simple-maps": "^3.0.6",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",

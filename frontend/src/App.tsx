@@ -13,8 +13,7 @@ import {
   Search,
   Database,
   LayoutDashboard,
-  Menu,
-  Lock
+  Menu
 } from "lucide-react";
 import React from "react";
 import Dashboard from "./pages/Dashboard";
@@ -86,6 +85,15 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+const MicrosoftIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 23 23" fill="none">
+    <rect width="10.8" height="10.8" fill="#f35325"/>
+    <rect x="12.2" width="10.8" height="10.8" fill="#81bc06"/>
+    <rect y="12.2" width="10.8" height="10.8" fill="#05a6f0"/>
+    <rect x="12.2" y="12.2" width="10.8" height="10.8" fill="#ffba08"/>
+  </svg>
+);
+
 function Welcome() {
   const { instance } = useMsal();
   return (
@@ -141,7 +149,7 @@ function Welcome() {
           onClick={() => instance.loginRedirect(loginRequest)}
           className="login-btn"
         >
-          <Lock size={20} />
+          <MicrosoftIcon />
           Sign In with Microsoft
         </button>
         

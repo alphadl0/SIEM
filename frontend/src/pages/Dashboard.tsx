@@ -11,6 +11,9 @@ import {
 } from "recharts";
 import { useSignalR } from "../hooks/useSignalR";
 import { getVmBadgeTone, getVmDashboardLabel } from "../lib/vmStatus";
+import { Pagination } from "../components/Pagination";
+
+const ALERTS_PAGE_SIZE = 10;
 
 export default function Dashboard() {
   const {
@@ -20,6 +23,8 @@ export default function Dashboard() {
     connectionStatus = "Connecting",
     connectionError,
   } = useSignalR();
+
+  const [alertsPage, setAlertsPage] = React.useState(1);
 
   // Process data for charts
   const chartData = React.useMemo(() => {
@@ -51,18 +56,17 @@ export default function Dashboard() {
       .map(({ name, count }) => ({ name, count }));
   }, [alerts]);
 
+  const totalPages = Math.max(1, Math.ceil(alerts.length / ALERTS_PAGE_SIZE));
+  const paginatedAlerts = React.useMemo(() => {
+    const start = (alertsPage - 1) * ALERTS_PAGE_SIZE;
+    return alerts.slice(start, start + ALERTS_PAGE_SIZE);
+  }, [alerts, alertsPage]);
+
   return (
     <div className="fade-in">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1rem",
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>Overview Dashboard</h2>
+      <div className="flex justify-between items-center mb-md">
+        <div className="flex items-center gap-md">
+            <h2 className="m-0 text-lg">Overview Dashboard</h2>
             <div className={`badge ${
                 connectionStatus === 'Connected' ? 'low' : 
                 connectionStatus === 'Unauthorized' ? 'critical' : 'medium'
@@ -71,17 +75,17 @@ export default function Dashboard() {
             </div>
         </div>
         {lastPoll && (
-          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+          <div className="text-xs text-secondary">
             Poll: {new Date(lastPoll.timestamp).toLocaleTimeString()} •
             Status:{" "}
-            <span style={{ color: "var(--secondary)" }}>{lastPoll.status}</span>
+            <span className="text-success">{lastPoll.status}</span>
           </div>
         )}
       </div>
       {connectionError && connectionStatus !== "Connected" && (
         <div
-          className="card"
-          style={{ marginBottom: "1rem", padding: "0.85rem 1rem", color: "#991b1b" }}
+          className="card mb-md text-critical"
+          style={{ padding: "0.85rem 1rem" }}
         >
           Realtime diagnostics: {connectionError}
         </div>
@@ -193,26 +197,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "2fr 1.2fr",
-          gap: "0.75rem",
-          marginBottom: "1rem",
-        }}
-      >
-        <div className="card">
-          <h3
-            style={{
-              marginBottom: "1.5rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
+      <div className="flex gap-md mb-md">
+        <div className="card" style={{ flex: 2 }}>
+          <h3 className="flex items-center gap-sm mb-lg text-primary">
             <Activity size={20} color="var(--primary)" /> Security Event Trends
           </h3>
-          <div style={{ height: "300px", width: "100%" }}>
+          <div style={{ height: "220px", width: "100%" }}>
             <ResponsiveContainer>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -235,21 +225,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="card">
-          <h3
-            style={{
-              marginBottom: "1.5rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
+        <div className="card" style={{ flex: 1.2 }}>
+          <h3 className="flex items-center gap-sm mb-lg text-primary">
             <TerminalSquare size={20} color="var(--primary)" /> Infrastructure
             Status
           </h3>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-          >
+          <div className="flex flex-col gap-md">
             {Object.entries(vmStatuses).map(([vmName, vm]) => (
               <div
                 key={vmName}
@@ -258,14 +239,8 @@ export default function Dashboard() {
                   paddingBottom: "0.8rem",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "0.3rem",
-                  }}
-                >
-                  <span style={{ fontWeight: 600 }}>{vmName}</span>
+                <div className="flex justify-between mb-sm">
+                  <span className="font-semibold">{vmName}</span>
                   <span
                     className={`badge ${getVmBadgeTone(vm.status)}`}
                     style={{ fontSize: "0.65rem" }}
@@ -273,12 +248,7 @@ export default function Dashboard() {
                     {getVmDashboardLabel(vm.status)}
                   </span>
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text-secondary)",
-                  }}
-                >
+                <div className="text-xs text-secondary">
                   📍 {vm.location} • {vm.vmSize}
                 </div>
               </div>
@@ -286,16 +256,8 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
       <div className="card">
-        <h3
-          style={{
-            marginBottom: "1.5rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-          }}
-        >
+        <h3 className="flex items-center gap-sm mb-lg text-primary">
           <ShieldAlert size={20} color="var(--destructive)" /> Live Security
           Activity
         </h3>
@@ -305,7 +267,7 @@ export default function Dashboard() {
               <tr>
                 <th>TIME</th>
                 <th>USE CASE</th>
-                <th>SOURCE VM</th>
+                <th>SOURCE</th>
                 <th>SOURCE IP</th>
                 <th>SEVERITY</th>
                 <th>DESCRIPTION</th>
@@ -325,7 +287,7 @@ export default function Dashboard() {
                   </td>
                 </tr>
               ) : (
-                alerts.map((alert, idx) => (
+                paginatedAlerts.map((alert, idx) => (
                   <tr key={idx}>
                     <td
                       className="overview-feed-cell overview-feed-timestamp"
@@ -337,7 +299,7 @@ export default function Dashboard() {
                       {alert.useCaseId}
                     </td>
                     <td className="overview-feed-cell" title={alert.vm}>
-                      <span className="overview-feed-truncate">{alert.vm}</span>
+                      <span className="badge neutral overview-feed-truncate">{alert.vm}</span>
                     </td>
                     <td className="overview-feed-cell" title={`${alert.sourceIp}${alert.geo ? ` • ${formatGeoLocation(alert.geo.city, alert.geo.country)}` : ""}`}>
                       <span className="overview-feed-truncate">{alert.sourceIp}</span>
@@ -363,6 +325,15 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
+        {alerts.length > ALERTS_PAGE_SIZE && (
+          <Pagination
+            page={alertsPage}
+            totalPages={totalPages}
+            totalCount={alerts.length}
+            pageSize={ALERTS_PAGE_SIZE}
+            onPageChange={setAlertsPage}
+          />
+        )}
       </div>
     </div>
   );

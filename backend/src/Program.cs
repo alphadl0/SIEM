@@ -143,13 +143,13 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/alerts", async (int? page, int? pageSize, string? searchTerm, string? severity, backend.src.services.AlertHistoryService historyService, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
+app.MapGet("/api/alerts", async (int? page, int? pageSize, string? searchTerm, string? severity, bool? excludeAzure, backend.src.services.AlertHistoryService historyService, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
 {
     var logger = loggerFactory.CreateLogger("AlertsApi");
-    logger.LogInformation("Fetch alerts: page={Page}, size={Size}, search='{Search}', severity='{Severity}'", page, pageSize, searchTerm, severity);
+    logger.LogInformation("Fetch alerts: page={Page}, size={Size}, search='{Search}', severity='{Severity}', excludeAzure={ExcludeAzure}", page, pageSize, searchTerm, severity, excludeAzure);
     var normalizedPage = NormalizePage(page);
     var normalizedPageSize = NormalizePageSize(pageSize, 25);
-    var result = await historyService.GetPagedAlertsAsync(normalizedPage, normalizedPageSize, searchTerm, severity, cancellationToken);
+    var result = await historyService.GetPagedAlertsAsync(normalizedPage, normalizedPageSize, searchTerm, severity, excludeAzure, cancellationToken);
     return Results.Ok(result);
 }).RequireAuthorization("SecurityTeamPolicy");
 

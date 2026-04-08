@@ -133,7 +133,7 @@ export default function AccessLog() {
                     const isSuccess = log.ResultType === "0";
                     const deviceLabel = getDeviceLabel(log);
                     const deviceParts = getDeviceParts(log);
-                    const timestampLabel = new Date(log.TimeGenerated).toLocaleString();
+                    const timestampLabel = new Date(log.TimeGenerated).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
                     const identityLabel = log.UserPrincipalName || 'Unknown user';
                     const appLabel = log.AppDisplayName || 'Unknown app';
                     const sourceParts = getSourceLocationParts(log);
@@ -310,3 +310,4 @@ function toCountryName(value?: string) {
 
   return normalized;
 }
+

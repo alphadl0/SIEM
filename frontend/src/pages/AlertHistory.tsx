@@ -27,7 +27,7 @@ export default function AlertHistory() {
 
     try {
       setLoading(true);
-      const url = `/api/alerts?page=${page}&pageSize=${PAGE_SIZE}&searchTerm=${encodeURIComponent(searchTerm)}&severity=${severity}`;
+      const url = `/api/alerts?page=${page}&pageSize=${PAGE_SIZE}&searchTerm=${encodeURIComponent(searchTerm)}&severity=${severity}&excludeAzure=true`;
       const data = await fetchApiJson<PagedResponse<AlertEvent>>(
         instance,
         accounts[0],
@@ -62,7 +62,8 @@ export default function AlertHistory() {
     }
   }, []);
 
-  const displayedAlerts = (alerts.length > 0 || searchTerm !== '' || severity !== 'all') ? alerts : (page === 1 ? liveAlerts : []);
+  const filteredLiveAlerts = liveAlerts.filter(a => a.sourceIp !== 'Azure RM' && !a.title.toLowerCase().includes('cloud resource'));
+  const displayedAlerts = (alerts.length > 0 || searchTerm !== '' || severity !== 'all') ? alerts : (page === 1 ? filteredLiveAlerts : []);
   const effectiveTotalCount = totalCount > 0 ? totalCount : displayedAlerts.length;
   const totalPages = Math.max(1, Math.ceil(effectiveTotalCount / PAGE_SIZE));
 
@@ -108,8 +109,8 @@ export default function AlertHistory() {
             <tbody>
               {displayedAlerts.map((alert, i) => (
                 <tr key={i}>
-                  <td className="incident-cell incident-timestamp" title={new Date(alert.timestamp).toLocaleString()}>
-                    {new Date(alert.timestamp).toLocaleString()}
+                  <td className="incident-cell incident-timestamp" title={new Date(alert.timestamp).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}>
+                    {new Date(alert.timestamp).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                   </td>
                   <td className="incident-cell incident-strong" title={alert.title}>
                     {alert.title}
@@ -150,4 +151,7 @@ export default function AlertHistory() {
     </div>
   );
 }
+
+
+
 

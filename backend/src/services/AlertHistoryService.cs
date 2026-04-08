@@ -33,10 +33,10 @@ public class AlertHistoryService
             .Replace("\n", string.Empty);
     }
 
-    public async Task<PagedResult<Alert>> GetPagedAlertsAsync(int page, int pageSize, string? searchTerm = null, string? severity = null, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<Alert>> GetPagedAlertsAsync(int page, int pageSize, string? searchTerm = null, string? severity = null, bool? excludeAzure = null, CancellationToken cancellationToken = default)
     {
         await EnsureHydratedAsync(cancellationToken);
-        return _alertEngine.GetRecentAlertsPage(page, pageSize, searchTerm, severity);
+        return _alertEngine.GetRecentAlertsPage(page, pageSize, searchTerm, severity, excludeAzure);
     }
 
     private async Task EnsureHydratedAsync(CancellationToken cancellationToken)

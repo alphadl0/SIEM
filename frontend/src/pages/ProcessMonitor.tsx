@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useMsal } from '@azure/msal-react';
-import { Activity, Cpu } from 'lucide-react';
+import { Activity, Cpu, Server } from 'lucide-react';
 import { fetchApiJson } from '../lib/backend';
 import { FilterBar } from '../components/FilterBar';
 import { Pagination } from '../components/Pagination';
@@ -14,6 +14,16 @@ export default function ProcessMonitor() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+
+  const assetCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of procs) {
+      if (!p.Computer) continue;
+      counts[p.Computer] = (counts[p.Computer] || 0) + 1;
+    }
+    return Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  }, [procs]);
 
   useEffect(() => {
     const fetchProcs = async () => {
@@ -57,6 +67,7 @@ export default function ProcessMonitor() {
   }, [instance, accounts]);
 
   const filteredProcs = procs.filter(p => {
+    if (selectedAsset && p.Computer !== selectedAsset) return false;
     if (!searchTerm) return true;
     const s = searchTerm.toLowerCase();
     return (
@@ -82,9 +93,49 @@ export default function ProcessMonitor() {
       />
 
       <div className="card" style={{ overflowX: 'auto' }}>
-        <h3 className="flex items-center gap-sm mb-lg text-primary">
+        <h3 className="flex items-center justify-between gap-sm mb-md text-primary">
+          <div className="flex items-center gap-sm">
             <Activity size={22} className="text-primary" /> Forensic Processes
+            {selectedAsset && <span className="badge neutral ml-sm">Filtered by: {selectedAsset}</span>}
+          </div>
         </h3>
+
+        <div className="flex flex-wrap gap-sm mb-lg">
+          {assetCounts.map(([computer, count]) => (
+            <button 
+              key={computer} 
+              className={`flex items-center gap-sm transition-all`}
+              onClick={() => {
+                setSelectedAsset(selectedAsset === computer ? null : computer);
+                setPage(1);
+              }}
+              style={{
+                background: selectedAsset === computer ? 'var(--primary)' : '#f8fafc',
+                color: selectedAsset === computer ? 'white' : 'var(--text-primary)',
+                border: selectedAsset === computer ? '1px solid var(--primary)' : '1px solid var(--border-light)',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 500,
+                fontSize: '0.85rem'
+              }}
+            >
+              <Server size={14} style={{ color: selectedAsset === computer ? 'white' : '#16a34a' }} />
+              {computer}
+              <span 
+                style={{ 
+                  background: selectedAsset === computer ? 'rgba(255,255,255,0.2)' : '#e2e8f0', 
+                  padding: '2px 6px', 
+                  borderRadius: '12px',
+                  fontSize: '0.75rem'
+                }}
+              >
+                {count}
+              </span>
+            </button>
+          ))}
+        </div>
+
         {error && <p className="text-critical">{error}</p>}
         {loading ? <p>Analyzing system execution logs...</p> : (
           <table className="contrast-table-head">
@@ -100,7 +151,7 @@ export default function ProcessMonitor() {
             <tbody>
               {currentProcs.map((p, i) => (
                 <tr key={i}>
-                     <td className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{new Date(p.TimeGenerated).toLocaleString()}</td>
+                     <td className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{new Date(p.TimeGenerated).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</td>
                    <td className="font-semibold">{p.Computer}</td>
                    <td>
                     <div className="flex items-center gap-sm">

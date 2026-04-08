@@ -43,12 +43,12 @@ public class AlertEngine
 
         if (eventId == 4625)
         {
-            await CreateAlert(timestamp, "Failed Login Attempt (Windows)", "Low", computer, ipAddress, $"Failed login attempt for account: {account}", ct, broadcast);
+            await CreateAlert(timestamp, "Failed Login Attempt (Windows)", "Medium", computer, ipAddress, $"Failed login attempt for account: {account}", ct, broadcast);
         }
 
         if (eventId == 4672)
         {
-            await CreateAlert(timestamp, "Privilege Escalation (Windows)", "Medium", computer, ipAddress, $"Special privileges assigned to: {account}", ct, broadcast);
+            await CreateAlert(timestamp, "Privilege Escalation (Windows)", "High", computer, ipAddress, $"Special privileges assigned to: {account}", ct, broadcast);
         }
 
         if (eventId == 4688 && (processName.ToLower().Contains("powershell.exe") || processName.ToLower().Contains("cmd.exe")))
@@ -68,7 +68,7 @@ public class AlertEngine
 
         if (eventId == 4663)
         {
-            await CreateAlert(timestamp, "Sensitive Object Access", "Low", computer, ipAddress, $"Access attempt on sensitive object by {account}", ct, broadcast);
+            await CreateAlert(timestamp, "Sensitive Object Access", "Medium", computer, ipAddress, $"Access attempt on sensitive object by {account}", ct, broadcast);
         }
     }
 
@@ -82,7 +82,7 @@ public class AlertEngine
             var userMatch = Regex.Match(message, @"Failed password for (?:invalid user )?(?<user>\S+)");
             string user = userMatch.Success ? userMatch.Groups["user"].Value : "Unknown";
             
-            await CreateAlert(timestamp, "Failed SSH Login (Linux)", "Low", hostName, ip, $"Failed SSH login attempt for user '{user}' detected in syslog.", ct, broadcast);
+            await CreateAlert(timestamp, "Failed SSH Login (Linux)", "Medium", hostName, ip, $"Failed SSH login attempt for user '{user}' detected in syslog.", ct, broadcast);
         }
 
         if (message.Contains("new user", StringComparison.OrdinalIgnoreCase) && message.Contains("name=", StringComparison.OrdinalIgnoreCase))
@@ -101,17 +101,37 @@ public class AlertEngine
 
     public async Task ProcessLinuxAuditAsync(DateTime timestamp, string computer, string rawData, CancellationToken ct, bool broadcast = true)
     {
+        string GetUserFromAudit(string data)
+        {
+            var acctMatch = Regex.Match(data, @"acct=""?([^""\s]+)""?");
+            if (acctMatch.Success) return acctMatch.Groups[1].Value;
+
+            var uidMatch = Regex.Match(data, @"(?:a?uid|user)=""?([^""\s]+)""?");
+            if (uidMatch.Success) return uidMatch.Groups[1].Value;
+
+            return "Unknown";
+        }
+
+        string sourceUser = GetUserFromAudit(rawData);
+
         if (rawData.Contains("/etc/passwd") || rawData.Contains("/etc/shadow") || rawData.Contains("/etc/sudoers"))
         {
             if (rawData.Contains("wa") || rawData.Contains("write"))
             {
-                await CreateAlert(timestamp, "Sensitive File Modification", "Critical", computer, "Unknown", $"Write/Append attempt on sensitive file: {rawData}", ct, broadcast);
+                await CreateAlert(timestamp, "Sensitive File Modification", "Critical", computer, sourceUser, $"Write/Append attempt on sensitive file: {rawData}", ct, broadcast);
             }
         }
 
         if (rawData.Contains("exe=\"/usr/bin/sudo\"") || rawData.Contains("exe=\"/bin/sudo\""))
         {
-            await CreateAlert(timestamp, "Privilege Escalation (Sudo)", "Low", computer, "Unknown", "Sudo execution detected", ct, broadcast);
+            // Avoid duplicate numeric UID alerts (like "1000") by skipping rows lacking a proper account name.
+            // Sudo executions emit multiple audit rows; the one with acct="username" will be processed instead.
+            if (long.TryParse(sourceUser, out _) && !rawData.Contains("acct="))
+            {
+                return;
+            }
+
+            await CreateAlert(timestamp, "Privilege Escalation (Sudo)", "High", computer, sourceUser, "Sudo execution detected", ct, broadcast);
         }
     }
 
@@ -170,7 +190,7 @@ public class AlertEngine
         }
     }
 
-    public PagedResult<Alert> GetRecentAlertsPage(int page, int pageSize, string? searchTerm = null, string? severity = null)
+    public PagedResult<Alert> GetRecentAlertsPage(int page, int pageSize, string? searchTerm = null, string? severity = null, bool? excludeAzure = null)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
@@ -179,6 +199,11 @@ public class AlertEngine
         lock (_alertsSync)
         {
             var query = _alerts.Values.AsEnumerable();
+
+            if (excludeAzure == true)
+            {
+                query = query.Where(a => a.SourceIp != "Azure RM" && !a.Title.ToLowerInvariant().Contains("cloud resource"));
+            }
 
             if (!string.IsNullOrWhiteSpace(severity) && !string.Equals(severity, "all", StringComparison.OrdinalIgnoreCase))
             {
@@ -218,7 +243,12 @@ public class AlertEngine
         if (operationName.Contains("write", StringComparison.OrdinalIgnoreCase) || operationName.Contains("delete", StringComparison.OrdinalIgnoreCase) || operationName.Contains("action", StringComparison.OrdinalIgnoreCase))
         {
             var severity = operationName.Contains("delete", StringComparison.OrdinalIgnoreCase) ? "High" : "Medium";
-            var title = $"Cloud Resource Modification ({status})";
+            var actionName = "Modification";
+            if (operationName.Contains("delete", StringComparison.OrdinalIgnoreCase)) actionName = "Deletion";
+            else if (operationName.Contains("write", StringComparison.OrdinalIgnoreCase)) actionName = "Creation/Update";
+            else if (operationName.Contains("action", StringComparison.OrdinalIgnoreCase)) actionName = "Action";
+            var title = $"Cloud Resource {actionName} ({status})";
+
             await CreateAlert(timestamp, title, severity, ExtractResourceName(resourceId), "Azure RM", $"Caller '{caller}' performed '{operationName}' on '{ExtractResourceName(resourceId)}'. Details: {description}", ct, broadcast);
         }
     }
@@ -308,3 +338,4 @@ public class AlertEngine
             alert.Description.Trim());
     }
 }
+

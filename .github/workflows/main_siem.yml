@@ -24,6 +24,11 @@ jobs:
           node-version: '20'
 
       - name: Build frontend
+        env:
+          VITE_AZURE_TENANT_ID: ${{ vars.VITE_AZURE_TENANT_ID }}
+          VITE_AZURE_CLIENT_ID: ${{ vars.VITE_AZURE_CLIENT_ID }}
+          VITE_BACKEND_SCOPE: ${{ vars.VITE_BACKEND_SCOPE }}
+          VITE_BACKEND_URL: ${{ vars.VITE_BACKEND_URL }}
         run: |
           cd frontend
           npm ci

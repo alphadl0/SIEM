@@ -36,7 +36,7 @@ function Layout({ children }: { children: React.ReactNode }) {
            <img src="/logo.png" alt="Logo" style={{ width: "30px", height: "30px", flexShrink: 0 }} />
              <h4 className="sidebar-title" style={{ color: "white", margin: 0, fontWeight: 700, fontSize: "0.85rem" }}>SIEM Portal</h4>
           </div>
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column" }} onClick={() => setIsSidebarOpen(false)}>
           <NavLink to="/dashboard" data-title="Overview" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
             <LayoutDashboard size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Overview</span>
           </NavLink>

@@ -80,7 +80,8 @@ public class AlertHistoryService
                 SafeQueryAsync(_client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken)
             );
 
-            if (results[0] != null) foreach (var row in results[0].Value.Table.Rows)
+            var securityEvents = results[0]?.Value?.Table?.Rows;
+            if (securityEvents != null) foreach (var row in securityEvents)
             {
                 await _alertEngine.ProcessSecurityEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -95,7 +96,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[1] != null) foreach (var row in results[1].Value.Table.Rows)
+            var syslogs = results[1]?.Value?.Table?.Rows;
+            if (syslogs != null) foreach (var row in syslogs)
             {
                 await _alertEngine.ProcessSyslogAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -106,7 +108,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[2] != null) foreach (var row in results[2].Value.Table.Rows)
+            var windowsEvents = results[2]?.Value?.Table?.Rows;
+            if (windowsEvents != null) foreach (var row in windowsEvents)
             {
                 await _alertEngine.ProcessWindowsEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -117,7 +120,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[3] != null) foreach (var row in results[3].Value.Table.Rows)
+            var linuxAudits = results[3]?.Value?.Table?.Rows;
+            if (linuxAudits != null) foreach (var row in linuxAudits)
             {
                 await _alertEngine.ProcessLinuxAuditAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -127,7 +131,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[4] != null) foreach (var row in results[4].Value.Table.Rows)
+            var signinLogs = results[4]?.Value?.Table?.Rows;
+            if (signinLogs != null) foreach (var row in signinLogs)
             {
                 await _alertEngine.ProcessSigninLogAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -143,7 +148,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[5] != null) foreach (var row in results[5].Value.Table.Rows)
+            var auditLogs = results[5]?.Value?.Table?.Rows;
+            if (auditLogs != null) foreach (var row in auditLogs)
             {
                 await _alertEngine.ProcessAuditLogAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -158,7 +164,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[6] != null) foreach (var row in results[6].Value.Table.Rows)
+            var riskyUsers = results[6]?.Value?.Table?.Rows;
+            if (riskyUsers != null) foreach (var row in riskyUsers)
             {
                 await _alertEngine.ProcessRiskyUserAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -171,7 +178,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[7] != null) foreach (var row in results[7].Value.Table.Rows)
+            var riskEvents = results[7]?.Value?.Table?.Rows;
+            if (riskEvents != null) foreach (var row in riskEvents)
             {
                 await _alertEngine.ProcessUserRiskEventAsync(
                     GetTimestamp(row["TimeGenerated"]),
@@ -187,7 +195,8 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            if (results[8] != null) foreach (var row in results[8].Value.Table.Rows)
+            var azureActivities = results[8]?.Value?.Table?.Rows;
+            if (azureActivities != null) foreach (var row in azureActivities)
             {
                 await _alertEngine.ProcessAzureActivityLogAsync(
                     GetTimestamp(row["TimeGenerated"]),

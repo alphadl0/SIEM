@@ -28,8 +28,6 @@ public static class KqlValidator
         "LinuxAudit_CL",
         "SigninLogs",
         "AuditLogs",
-        "AADRiskyUsers",
-        "AADUserRiskEvents",
         "AzureActivity",
         "Heartbeat",
         "Perf",

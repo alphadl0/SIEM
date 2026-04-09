@@ -37,3 +37,12 @@ export function getSeverityBadgeClass(severity: string): string {
       return "neutral";
   }
 }
+
+export function normalizeKnownValue(value?: string | number | null): string {
+  if (value == null) return '';
+  const str = String(value).trim();
+  if (!str || str.toLowerCase() === 'unknown' || str.toLowerCase() === 'null') {
+    return '';
+  }
+  return str;
+}

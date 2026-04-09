@@ -76,8 +76,6 @@ public class AlertHistoryService
                 SafeQueryAsync(_client, _workspaceId, LinuxAuditQueries.GetQuery(), timeRange, cancellationToken),
                 SafeQueryAsync(_client, _workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken),
                 SafeQueryAsync(_client, _workspaceId, AuditLogsQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, AADRiskyUsersQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, AADUserRiskEventsQueries.GetQuery(), timeRange, cancellationToken),
                 SafeQueryAsync(_client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken)
             );
 
@@ -165,38 +163,7 @@ public class AlertHistoryService
                     broadcast: false);
             }
 
-            var riskyUsers = results[6]?.Value?.Table?.Rows;
-            if (riskyUsers != null) foreach (var row in riskyUsers)
-            {
-                await _alertEngine.ProcessRiskyUserAsync(
-                    GetTimestamp(row["TimeGenerated"]),
-                    row["UserPrincipalName"]?.ToString() ?? string.Empty,
-                    row["UserDisplayName"]?.ToString() ?? string.Empty,
-                    row["RiskLevel"]?.ToString() ?? string.Empty,
-                    row["RiskState"]?.ToString() ?? string.Empty,
-                    row["RiskDetail"]?.ToString() ?? string.Empty,
-                    cancellationToken,
-                    broadcast: false);
-            }
-
-            var riskEvents = results[7]?.Value?.Table?.Rows;
-            if (riskEvents != null) foreach (var row in riskEvents)
-            {
-                await _alertEngine.ProcessUserRiskEventAsync(
-                    GetTimestamp(row["TimeGenerated"]),
-                    row["UserPrincipalName"]?.ToString() ?? string.Empty,
-                    row["UserDisplayName"]?.ToString() ?? string.Empty,
-                    row["RiskEventType"]?.ToString() ?? string.Empty,
-                    row["RiskLevel"]?.ToString() ?? string.Empty,
-                    row["RiskState"]?.ToString() ?? string.Empty,
-                    row["RiskDetail"]?.ToString() ?? string.Empty,
-                    row["IpAddress"]?.ToString() ?? string.Empty,
-                    row["Location"]?.ToString() ?? string.Empty,
-                    cancellationToken,
-                    broadcast: false);
-            }
-
-            var azureActivities = results[8]?.Value?.Table?.Rows;
+            var azureActivities = results[6]?.Value?.Table?.Rows;
             if (azureActivities != null) foreach (var row in azureActivities)
             {
                 await _alertEngine.ProcessAzureActivityLogAsync(
@@ -205,7 +172,7 @@ public class AlertHistoryService
                     row["OperationNameValue"]?.ToString() ?? string.Empty,
                     row["_ResourceId"]?.ToString() ?? string.Empty,
                     row["ActivityStatusValue"]?.ToString() ?? string.Empty,
-                    $"IP: {row["CallerIpAddress"]?.ToString() ?? "Unknown"}",
+                    row["CallerIpAddress"]?.ToString() ?? "Unknown",
                     cancellationToken,
                     broadcast: false);
             }

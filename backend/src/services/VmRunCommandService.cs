@@ -142,8 +142,6 @@ public class VmRunCommandService
             input.Script.Add("$os = Get-CimInstance Win32_OperatingSystem");
             input.Script.Add("$computer = Get-CimInstance Win32_ComputerSystem");
             input.Script.Add("$disk = Get-CimInstance Win32_LogicalDisk -Filter \"DeviceID='C:'\"");
-            input.Script.Add("Write-Output (\"SIEM_OS_LABEL=\" + $os.Caption)");
-            input.Script.Add("Write-Output (\"SIEM_OS_VERSION=\" + $os.Version)");
             input.Script.Add("Write-Output (\"SIEM_MEMORY_TOTAL_GB=\" + [math]::Round(($computer.TotalPhysicalMemory / 1GB), 1))");
             input.Script.Add("Write-Output (\"SIEM_MEMORY_USED_GB=\" + [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB), 1))");
             input.Script.Add("if ($disk -ne $null) {");
@@ -153,16 +151,10 @@ public class VmRunCommandService
         }
         else
         {
-            input.Script.Add("OS_LABEL=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d= -f2- | tr -d '\"')");
-            input.Script.Add("OS_VERSION=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2- | tr -d '\"')");
-            input.Script.Add("if [ -z \"$OS_LABEL\" ]; then OS_LABEL=$(uname -s); fi");
-            input.Script.Add("if [ -z \"$OS_VERSION\" ]; then OS_VERSION=$(uname -r); fi");
             input.Script.Add("MEM_TOTAL_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)");
             input.Script.Add("MEM_AVAILABLE_KB=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)");
             input.Script.Add("DISK_USED_BYTES=$(df -B1 / --output=used | tail -1 | tr -d ' ')");
             input.Script.Add("DISK_TOTAL_BYTES=$(df -B1 / --output=size | tail -1 | tr -d ' ')");
-            input.Script.Add("printf 'SIEM_OS_LABEL=%s\\n' \"$OS_LABEL\"");
-            input.Script.Add("printf 'SIEM_OS_VERSION=%s\\n' \"$OS_VERSION\"");
             input.Script.Add("if [ -n \"$MEM_TOTAL_KB\" ]; then awk \"BEGIN { printf \\\"SIEM_MEMORY_TOTAL_GB=%.1f\\\\n\\\", $MEM_TOTAL_KB / 1024 / 1024 }\"; fi");
             input.Script.Add("if [ -n \"$MEM_TOTAL_KB\" ] && [ -n \"$MEM_AVAILABLE_KB\" ]; then awk \"BEGIN { printf \\\"SIEM_MEMORY_USED_GB=%.1f\\\\n\\\", ($MEM_TOTAL_KB - $MEM_AVAILABLE_KB) / 1024 / 1024 }\"; fi");
             input.Script.Add("if [ -n \"$DISK_USED_BYTES\" ]; then awk \"BEGIN { printf \\\"SIEM_DISK_USED_GB=%.1f\\\\n\\\", $DISK_USED_BYTES / 1024 / 1024 / 1024 }\"; fi");

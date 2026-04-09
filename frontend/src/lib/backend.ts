@@ -54,43 +54,25 @@ export async function fetchApiJson<T>(
   init: RequestInit = {},
 ) {
   const accessToken = await acquireApiAccessToken(instance, account);
-  let lastError: Error | null = null;
+  const baseUrl = getInitialBackendUrl();
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${accessToken}`);
 
-  for (const baseUrl of getKnownBackendUrls()) {
-    const headers = new Headers(init.headers);
-    headers.set("Authorization", `Bearer ${accessToken}`);
+  try {
+    const response = await fetch(buildBackendUrl(path, baseUrl), {
+      ...init,
+      headers,
+    });
 
-    try {
-      const response = await fetch(buildBackendUrl(path, baseUrl), {
-        ...init,
-        headers,
-      });
-
-      if (!response.ok) {
-        const detail = await response.text().catch(() => response.statusText);
-        const error = new Error(
-          `API request failed with status ${response.status}: ${detail || response.statusText}`,
-        );
-
-        if (response.status === 404 || response.status === 405) {
-          lastError = error;
-          continue;
-        }
-
-        throw error;
-      }
-
-      rememberBackendUrl(baseUrl);
-      return (await response.json()) as T;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error("Failed to fetch");
-      if (!isRetriableFetchError(lastError)) {
-        throw lastError;
-      }
+    if (!response.ok) {
+      const detail = await response.text().catch(() => response.statusText);
+      throw new Error(`API request failed with status ${response.status}: ${detail || response.statusText}`);
     }
-  }
 
-  throw lastError ?? new Error("Failed to fetch");
+    return (await response.json()) as T;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Failed to fetch");
+  }
 }
 
 function normalizeUrl(url: string) {
@@ -98,45 +80,17 @@ function normalizeUrl(url: string) {
 }
 
 function getInitialBackendUrl() {
-  const knownUrls = getKnownBackendUrls();
-  return knownUrls[0] ?? normalizeUrl(import.meta.env.VITE_BACKEND_URL || DEFAULT_BACKEND_URL);
+  return normalizeUrl(import.meta.env.VITE_BACKEND_URL || DEFAULT_BACKEND_URL);
 }
 
 export function getKnownBackendUrls() {
-  const urls = new Set<string>();
-  const configuredUrl = import.meta.env.VITE_BACKEND_URL;
-  const storedUrl = typeof window !== "undefined"
-    ? window.localStorage.getItem(BACKEND_URL_STORAGE_KEY)
-    : null;
-  const host = typeof window !== "undefined" ? window.location.hostname : "";
-
-  addKnownUrl(urls, storedUrl);
-  addKnownUrl(urls, configuredUrl);
-  
-  if (typeof window !== "undefined" && window.location.origin) {
-    addKnownUrl(urls, window.location.origin);
-  }
-
-  addKnownUrl(urls, DEFAULT_BACKEND_URL);
-
-  if (host === "localhost" || host === "127.0.0.1") {
-    addKnownUrl(urls, `http://${host}:5113`);
-    addKnownUrl(urls, `https://${host}:7031`);
-  }
-
-  addKnownUrl(urls, "http://localhost:5113");
-  addKnownUrl(urls, "http://127.0.0.1:5113");
-  addKnownUrl(urls, "https://localhost:7031");
-  addKnownUrl(urls, "https://127.0.0.1:7031");
-
-  return Array.from(urls);
+  return [getInitialBackendUrl()];
 }
 
 function addKnownUrl(urls: Set<string>, url: string | null | undefined) {
   if (!url) {
     return;
   }
-
   urls.add(normalizeUrl(url));
 }
 
@@ -146,15 +100,4 @@ export function rememberBackendUrl(url: string) {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(BACKEND_URL_STORAGE_KEY, backendUrl);
   }
-}
-
-function isRetriableFetchError(error: Error) {
-  const message = error.message.toLowerCase();
-  return (
-    message.includes("failed to fetch") ||
-    message.includes("networkerror") ||
-    message.includes("load failed") ||
-    message.includes("404") ||
-    message.includes("405")
-  );
 }

@@ -45,16 +45,17 @@ public class LogAnalyticsPoller : BackgroundService
                     var timeRange = new QueryTimeRange(TimeSpan.FromMinutes(25)); // Slightly longer to ensure no gaps at 10s poll
 
                     var results = await Task.WhenAll(
-                        client.QueryWorkspaceAsync(_workspaceId, SecurityEventQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, SyslogQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, WindowsEventQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, LinuxAuditQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken: stoppingToken)
+                        SafeQueryAsync(client, _workspaceId, SecurityEventQueries.GetQuery(), timeRange, stoppingToken),
+                        SafeQueryAsync(client, _workspaceId, SyslogQueries.GetQuery(), timeRange, stoppingToken),
+                        SafeQueryAsync(client, _workspaceId, WindowsEventQueries.GetQuery(), timeRange, stoppingToken),
+                        SafeQueryAsync(client, _workspaceId, LinuxAuditQueries.GetQuery(), timeRange, stoppingToken),
+                        SafeQueryAsync(client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, stoppingToken),
+                        SafeQueryAsync(client, _workspaceId, SigninLogsQueries.GetQuery(), timeRange, stoppingToken)
                     );
 
                     // 1. Process SecurityEvents
-                    var secEvents = results[0].Value.Table;
+                    var secEvents = results[0]?.Value?.Table;
+                    if (secEvents != null) {
                     foreach (var row in secEvents.Rows) {
                         if (!ShouldProcess("SecurityEvent",
                             row["TimeGenerated"],
@@ -81,9 +82,11 @@ public class LogAnalyticsPoller : BackgroundService
                             stoppingToken
                         );
                     }
+                    }
 
                     // 2. Process Syslog
-                    var syslogs = results[1].Value.Table;
+                    var syslogs = results[1]?.Value?.Table;
+                    if (syslogs != null) {
                     foreach (var row in syslogs.Rows) {
                         if (!ShouldProcess("Syslog",
                             row["TimeGenerated"],
@@ -102,9 +105,11 @@ public class LogAnalyticsPoller : BackgroundService
                             stoppingToken
                         );
                     }
+                    }
 
                     // 3. Process Windows Events
-                    var winEvents = results[2].Value.Table;
+                    var winEvents = results[2]?.Value?.Table;
+                    if (winEvents != null) {
                     foreach (var row in winEvents.Rows) {
                         if (!ShouldProcess("WindowsEvent",
                             row["TimeGenerated"],
@@ -119,13 +124,15 @@ public class LogAnalyticsPoller : BackgroundService
                             GetTimestamp(row["TimeGenerated"]),
                             row["Computer"]?.ToString() ?? "",
                             Convert.ToInt32(row["EventID"]),
-                            row["RenderedDescription"]?.ToString() ?? "",
+                            row["RenderedDescription"]?.ToString() ?? "",       
                             stoppingToken
                         );
                     }
+                    }
 
                     // 4. Process Linux Audit
-                    var linuxAudits = results[3].Value.Table;
+                    var linuxAudits = results[3]?.Value?.Table;
+                    if (linuxAudits != null) {
                     foreach (var row in linuxAudits.Rows) {
                         if (!ShouldProcess("LinuxAudit",
                             row["TimeGenerated"],
@@ -143,9 +150,11 @@ public class LogAnalyticsPoller : BackgroundService
                             stoppingToken
                         );
                     }
+                    }
 
                     // 5. Process Azure Activity
-                    var azureActivities = results[4].Value.Table;
+                    var azureActivities = results[4]?.Value?.Table;
+                    if (azureActivities != null) {
                     foreach (var row in azureActivities.Rows) {
                         if (!ShouldProcess("AzureActivity",
                             row["TimeGenerated"],
@@ -157,19 +166,21 @@ public class LogAnalyticsPoller : BackgroundService
                             continue;
                         }
 
-                        await _alertEngine.ProcessAzureActivityLogAsync(
+                        await _alertEngine.ProcessAzureActivityLogAsync(        
                             GetTimestamp(row["TimeGenerated"]),
                             row["Caller"]?.ToString() ?? "",
-                            row["OperationNameValue"]?.ToString() ?? "",
+                            row["OperationNameValue"]?.ToString() ?? "",        
                             row["_ResourceId"]?.ToString() ?? "",
-                            row["ActivityStatusValue"]?.ToString() ?? "",
-                            $"IP: {row["CallerIpAddress"]?.ToString() ?? "Unknown"}",
+                            row["ActivityStatusValue"]?.ToString() ?? "",       
+                            row["CallerIpAddress"]?.ToString() ?? "Unknown",
                             stoppingToken
                         );
                     }
+                    }
 
                     // 6. Process Signin Logs
-                    var signinLogs = results[5].Value.Table;
+                    var signinLogs = results[5]?.Value?.Table;
+                    if (signinLogs != null) {
                     foreach (var row in signinLogs.Rows) {
                         if (!ShouldProcess("SigninLogs",
                             row["TimeGenerated"],
@@ -187,11 +198,12 @@ public class LogAnalyticsPoller : BackgroundService
                             row["AppDisplayName"]?.ToString() ?? "",
                             row["Location"]?.ToString() ?? "",
                             row["DeviceDetail"]?.ToString() ?? "",
-                            row["ConditionalAccessStatus"]?.ToString() ?? "",
+                            row["ConditionalAccessStatus"]?.ToString() ?? "",   
                             row["ResultType"]?.ToString() ?? "",
                             row["ResultDescription"]?.ToString() ?? "",
                             stoppingToken
                         );
+                    }
                     }
 
                     await _hubContext.Clients.Group("security-team").SendAsync("pollStatus", new { status = "success", timestamp = DateTime.UtcNow }, stoppingToken);
@@ -217,6 +229,19 @@ public class LogAnalyticsPoller : BackgroundService
         }
 
         return _processedKeys.TryAdd($"{source}|{fingerprint}", DateTime.UtcNow);
+    }
+
+    private async Task<Azure.Response<Azure.Monitor.Query.Models.LogsQueryResult>?> SafeQueryAsync(LogsQueryClient client, string workspaceId, string query, QueryTimeRange timeRange, CancellationToken ct)
+    {
+        try
+        {
+            return await client.QueryWorkspaceAsync(workspaceId, query, timeRange, cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Poller failed to query workspace.");
+            return null;
+        }
     }
 
     private void CleanupProcessedKeys()

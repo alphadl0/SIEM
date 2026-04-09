@@ -162,36 +162,6 @@ public class AlertEngine
         }
     }
 
-    public async Task ProcessRiskyUserAsync(DateTime timestamp, string upn, string displayName, string riskLevel, string riskState, string riskDetail, CancellationToken ct, bool broadcast = true)
-    {
-        if (string.Equals(riskState, "atRisk", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(riskState, "confirmedCompromised", StringComparison.OrdinalIgnoreCase))
-        {
-            string severity = riskLevel switch
-            {
-                "high" => "Critical",
-                "medium" => "High",
-                _ => "Medium"
-            };
-            await CreateAlert(timestamp, "Risky User Detected", severity, "Entra ID Protection", upn, $"User {displayName} ({upn}) flagged as {riskState}. Risk level: {riskLevel}. Detail: {riskDetail}", ct, broadcast);
-        }
-    }
-
-    public async Task ProcessUserRiskEventAsync(DateTime timestamp, string upn, string displayName, string eventType, string riskLevel, string riskState, string riskDetail, string ip, string location, CancellationToken ct, bool broadcast = true)
-    {
-        if (!string.Equals(riskState, "remediated", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(riskState, "dismissed", StringComparison.OrdinalIgnoreCase))
-        {
-            string severity = riskLevel switch
-            {
-                "high" => "Critical",
-                "medium" => "High",
-                _ => "Medium"
-            };
-            await CreateAlert(timestamp, "Identity Risk Event", severity, "Entra ID Protection", ip, $"High-risk event '{eventType}' detected for {displayName} ({upn}) from {location}. Detail: {riskDetail}", ct, broadcast);
-        }
-    }
-
     public PagedResult<Alert> GetRecentAlertsPage(int page, int pageSize, bool? excludeAzure = null)
     {
         page = Math.Max(page, 1);

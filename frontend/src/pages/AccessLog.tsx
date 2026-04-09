@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { CircleUserRound } from 'lucide-react';
-import { formatTimestamp } from '../lib/format';
+import { formatTimestamp, normalizeKnownValue } from '../lib/format';
 import { fetchApiJson, type PagedResponse } from '../lib/backend';
 import { Pagination } from '../components/Pagination';
 
@@ -172,17 +172,21 @@ export default function AccessLog() {
   );
 }
 
-function normalizeKnownValue(value?: string | number | null): string {
-  if (value == null) return '';
-  const str = String(value).trim();
-  if (!str || str.toLowerCase() === 'unknown' || str.toLowerCase() === 'null') {
-    return '';
+function parseDynamic<T>(value: unknown): T | Partial<T> {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return {};
+    }
   }
-  return str;
+  return {};
 }
 
 function getDeviceLabel(log: AccessLogRow) {
-  const d = log.DeviceDetail || {};
+  const d = parseDynamic<DeviceDetail>(log.DeviceDetail);
   const values = [d.displayName, d.operatingSystem, d.browser, d.trustType]
     .map(normalizeKnownValue)
     .filter((value): value is string => typeof value === 'string' && value.length > 0);
@@ -191,7 +195,7 @@ function getDeviceLabel(log: AccessLogRow) {
 }
 
 function getReadableLocation(log: AccessLogRow) {
-  const loc = log.LocationDetails || {};
+  const loc = parseDynamic<LocationDetails>(log.LocationDetails);
   const parts = [loc.city, loc.state, loc.countryOrRegion]
     .map(normalizeKnownValue)
     .filter(Boolean);

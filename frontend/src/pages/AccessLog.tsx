@@ -7,18 +7,44 @@ import { Pagination } from '../components/Pagination';
 
 const PAGE_SIZE = 10;
 
+interface LocationDetails {
+  city?: string;
+  state?: string;
+  countryOrRegion?: string;
+  geoCoordinates?: {
+    latitude?: number;
+    longitude?: number;
+  };
+}
+
+interface DeviceDetail {
+  displayName?: string;
+  operatingSystem?: string;
+  browser?: string;
+  trustType?: string;
+}
+
 interface AccessLogRow {
-  TimeGenerated: string;
+  CreatedDateTime: string;
   UserPrincipalName?: string;
-  AppDisplayName?: string;
+  UserDisplayName?: string;
+  UserType?: string;
   IPAddress?: string;
-  City?: string;
-  Country?: string;
-  Location?: string;
-  DeviceName?: string;
-  DeviceOperatingSystem?: string;
-  DeviceBrowser?: string;
-  ResultType?: string;
+  LocationDetails?: LocationDetails;
+  DeviceDetail?: DeviceDetail;
+  RiskLevelAggregated?: string;
+  RiskLevelDuringSignIn?: string;
+  RiskState?: string;
+  RiskEventTypes_V2?: string;
+  RiskDetail?: string;
+  ConditionalAccessStatus?: string;
+  AppDisplayName?: string;
+  ClientAppUsed?: string;
+  ResourceDisplayName?: string;
+  ResultSignature?: string;
+  ResultDescription?: string;
+  Identity?: string;
+  OperationName?: string;
 }
 
 export default function AccessLog() {
@@ -26,7 +52,6 @@ export default function AccessLog() {
   const [logs, setLogs] = useState<AccessLogRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [failedCount, setFailedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +70,6 @@ export default function AccessLog() {
       );
       setLogs(data.items);
       setTotalCount(data.totalCount);
-      setFailedCount(data.failedCount ?? 0);
       setError(null);
     } catch (err) {
       console.error('Failed to load sign-in logs', err);
@@ -65,17 +89,6 @@ export default function AccessLog() {
 
   return (
     <div className="fade-in">
-      <div className="flex gap-md mb-xl">
-         <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>
-            <p className="text-xs font-semibold mb-sm text-secondary">TOTAL ATTEMPTS (1H)</p>
-            <h2 className="m-0">{totalCount}</h2>
-         </div>
-         <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>
-            <p className="text-xs font-semibold mb-sm text-secondary">FAILED SIGN-INS</p>
-            <h2 className="m-0 text-critical">{failedCount}</h2>
-         </div>
-      </div>
-
       <div className="card" style={{ overflowX: 'auto' }}>
         <h3 className="flex items-center gap-sm mb-lg text-primary">
             <CircleUserRound size={22} className="text-primary" /> Identity Logs
@@ -85,59 +98,58 @@ export default function AccessLog() {
           <table className="identity-log-table" style={{ minWidth: '100%', width: 'max-content' }}>
             <thead>
               <tr>
-                <th>TIMESTAMP</th>
-                <th>IDENTITY</th>
-                <th>APPLICATION</th>
-                <th>SOURCE IP</th>
-                <th>DEVICE</th>
-                <th>STATUS</th>
+                <th>Created Date Time</th>
+                <th>User Principal Name</th>
+                <th>User Display Name</th>
+                <th>User Type</th>
+                <th>IP Address</th>
+                <th>Location Details</th>
+                <th>Device Detail</th>
+                <th>Risk Level Aggregated</th>
+                <th>Risk Level During Sign In</th>
+                <th>Risk State</th>
+                <th>Risk Event Types V2</th>
+                <th>Risk Detail</th>
+                <th>Conditional Access Status</th>
+                <th>App Display Name</th>
+                <th>Client App Used</th>
+                <th>Resource Display Name</th>
+                <th>Result Signature</th>
+                <th>Result Description</th>
+                <th>Identity</th>
+                <th>Operation Name</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log, i) => (
                 <tr key={i}>
                   {(() => {
-                    const isSuccess = log.ResultType === "0";
                     const deviceLabel = getDeviceLabel(log);
-                    const deviceParts = getDeviceParts(log);
-                    const timestampLabel = formatTimestamp(log.TimeGenerated);
-                    const identityLabel = log.UserPrincipalName || 'Unknown user';
-                    const appLabel = log.AppDisplayName || 'Unknown app';
-                    const sourceParts = getSourceLocationParts(log);
-                    const locationLabel = getSourceLocationLabel(log);
+                    const timestampLabel = formatTimestamp(log.CreatedDateTime);
+                    const locationLabel = getReadableLocation(log);
 
                     return (
                       <>
-                  <td className="identity-log-cell identity-log-timestamp" title={timestampLabel}>
-                    {timestampLabel}
-                  </td>
-                  <td className="identity-log-cell identity-log-identity" title={identityLabel}>
-                    {identityLabel}
-                  </td>
-                  <td className="identity-log-cell" title={appLabel}>
-                    <span className="badge neutral identity-log-badge">{appLabel}</span>
-                  </td>
-                  <td className="identity-log-cell identity-log-cell-stacked" title={locationLabel}>
-                    <div className="identity-log-stack">
-                      <span className="identity-log-primary">{sourceParts.primary}</span>
-                      {sourceParts.secondary && (
-                        <span className="identity-log-subline">{sourceParts.secondary}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="identity-log-cell identity-log-cell-stacked" title={deviceLabel}>
-                    <div className="identity-log-stack">
-                      <span className="identity-log-primary">{deviceParts.primary}</span>
-                      {deviceParts.secondary && (
-                        <span className="identity-log-subline">{deviceParts.secondary}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="identity-log-cell">
-                    <span className={`badge ${isSuccess ? "low" : "critical"} identity-log-status-badge`}>
-                      {isSuccess ? "Success" : "Failed"}
-                    </span>
-                  </td>
+                        <td className="identity-log-cell">{timestampLabel}</td>
+                        <td className="identity-log-cell">{log.UserPrincipalName}</td>
+                        <td className="identity-log-cell">{log.UserDisplayName}</td>
+                        <td className="identity-log-cell">{log.UserType}</td>
+                        <td className="identity-log-cell">{log.IPAddress}</td>
+                        <td className="identity-log-cell">{locationLabel}</td>
+                        <td className="identity-log-cell">{deviceLabel}</td>
+                        <td className="identity-log-cell">{log.RiskLevelAggregated}</td>
+                        <td className="identity-log-cell">{log.RiskLevelDuringSignIn}</td>
+                        <td className="identity-log-cell">{log.RiskState}</td>
+                        <td className="identity-log-cell">{log.RiskEventTypes_V2}</td>
+                        <td className="identity-log-cell">{log.RiskDetail}</td>
+                        <td className="identity-log-cell">{log.ConditionalAccessStatus}</td>
+                        <td className="identity-log-cell">{log.AppDisplayName}</td>
+                        <td className="identity-log-cell">{log.ClientAppUsed}</td>
+                        <td className="identity-log-cell">{log.ResourceDisplayName}</td>
+                        <td className="identity-log-cell">{log.ResultSignature}</td>
+                        <td className="identity-log-cell">{log.ResultDescription}</td>
+                        <td className="identity-log-cell">{log.Identity}</td>
+                        <td className="identity-log-cell">{log.OperationName}</td>
                       </>
                     );
                   })()}
@@ -160,121 +172,40 @@ export default function AccessLog() {
   );
 }
 
+function normalizeKnownValue(value?: string | number | null): string {
+  if (value == null) return '';
+  const str = String(value).trim();
+  if (!str || str.toLowerCase() === 'unknown' || str.toLowerCase() === 'null') {
+    return '';
+  }
+  return str;
+}
+
 function getDeviceLabel(log: AccessLogRow) {
-  const values = [log.DeviceName, log.DeviceOperatingSystem, log.DeviceBrowser]
+  const d = log.DeviceDetail || {};
+  const values = [d.displayName, d.operatingSystem, d.browser, d.trustType]
     .map(normalizeKnownValue)
     .filter((value): value is string => typeof value === 'string' && value.length > 0);
 
   return Array.from(new Set(values)).join(' • ') || 'Unavailable';
 }
 
-function getDeviceParts(log: AccessLogRow) {
-  const deviceName = normalizeKnownValue(log.DeviceName);
-  const operatingSystem = normalizeKnownValue(log.DeviceOperatingSystem);
-  const browser = normalizeKnownValue(log.DeviceBrowser);
-
-  const primary = deviceName || operatingSystem || browser || 'Unavailable';
-  const secondaryValues = Array.from(
-    new Set(
-      [operatingSystem, browser].filter(
-        (value): value is string => Boolean(value) && value !== primary,
-      ),
-    ),
-  );
-
-  return {
-    primary,
-    secondary: secondaryValues.join(' • '),
-  };
-}
-
-function getSourceLocationParts(log: AccessLogRow) {
-  return {
-    primary: log.IPAddress?.trim() || 'Unknown IP',
-    secondary: getReadableLocation(log),
-  };
-}
-
-function getSourceLocationLabel(log: AccessLogRow) {
-  const ipAddress = log.IPAddress?.trim() || 'Unknown IP';
-  const locationLabel = getReadableLocation(log);
-
-  return locationLabel ? `${ipAddress} • ${locationLabel}` : ipAddress;
-}
-
 function getReadableLocation(log: AccessLogRow) {
-  const legacyLocation = parseLegacyLocation(log.Location);
-  const city = firstNonEmpty(log.City, legacyLocation.city);
-  const country = toCountryName(firstNonEmpty(log.Country, legacyLocation.country));
-
-  if (city && country) {
-    return `${city}, ${country}`;
-  }
-
-  return city || country || legacyLocation.fallback;
-}
-
-function parseLegacyLocation(location?: string) {
-  const value = location?.trim();
-
-  if (!value || value.toLowerCase() === 'unknown') {
-    return { city: '', country: '', fallback: '' };
-  }
-
-  const slashParts = value.split('/').map((part) => part.trim()).filter(Boolean);
-
-  if (slashParts.length >= 2) {
-    return {
-      country: slashParts[0],
-      city: slashParts[1],
-      fallback: value,
-    };
-  }
-
-  const commaParts = value.split(',').map((part) => part.trim()).filter(Boolean);
-
-  if (commaParts.length >= 2) {
-    return {
-      city: commaParts[0],
-      country: commaParts[1],
-      fallback: value,
-    };
-  }
-
-  return { city: '', country: '', fallback: value };
-}
-
-function firstNonEmpty(...values: Array<string | undefined>) {
-  return values
-    .map((value) => value?.trim())
-    .find((value): value is string => typeof value === 'string' && value.length > 0 && value.toLowerCase() !== 'unknown') || '';
-}
-
-function normalizeKnownValue(value?: string) {
-  const normalized = value?.trim();
-
-  if (!normalized || normalized.toLowerCase() === 'unknown') {
-    return '';
-  }
-
-  return normalized;
-}
-
-function toCountryName(value?: string) {
-  const normalized = value?.trim();
-
-  if (!normalized) {
-    return '';
-  }
-
-  if (/^[A-Za-z]{2}$/.test(normalized)) {
-    try {
-      return new Intl.DisplayNames(['en'], { type: 'region' }).of(normalized.toUpperCase()) || normalized.toUpperCase();
-    } catch {
-      return normalized.toUpperCase();
+  const loc = log.LocationDetails || {};
+  const parts = [loc.city, loc.state, loc.countryOrRegion]
+    .map(normalizeKnownValue)
+    .filter(Boolean);
+  
+  let result = parts.join(', ');
+  
+  if (loc.geoCoordinates && typeof loc.geoCoordinates === 'object') {
+    const hasLatLong = loc.geoCoordinates.latitude !== undefined && loc.geoCoordinates.longitude !== undefined;
+    if (hasLatLong) {
+      const coords = `[${loc.geoCoordinates.latitude}, ${loc.geoCoordinates.longitude}]`;
+      result = result ? `${result} ${coords}` : coords;
     }
   }
-
-  return normalized;
+  
+  return result || 'Unknown Location';
 }
 

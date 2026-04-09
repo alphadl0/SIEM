@@ -49,7 +49,8 @@ public class LogAnalyticsPoller : BackgroundService
                         client.QueryWorkspaceAsync(_workspaceId, SyslogQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
                         client.QueryWorkspaceAsync(_workspaceId, WindowsEventQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
                         client.QueryWorkspaceAsync(_workspaceId, LinuxAuditQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
-                        client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: stoppingToken)
+                        client.QueryWorkspaceAsync(_workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken: stoppingToken),
+                        client.QueryWorkspaceAsync(_workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken: stoppingToken)
                     );
 
                     // 1. Process SecurityEvents
@@ -163,6 +164,32 @@ public class LogAnalyticsPoller : BackgroundService
                             row["_ResourceId"]?.ToString() ?? "",
                             row["ActivityStatusValue"]?.ToString() ?? "",
                             $"IP: {row["CallerIpAddress"]?.ToString() ?? "Unknown"}",
+                            stoppingToken
+                        );
+                    }
+
+                    // 6. Process Signin Logs
+                    var signinLogs = results[5].Value.Table;
+                    foreach (var row in signinLogs.Rows) {
+                        if (!ShouldProcess("SigninLogs",
+                            row["TimeGenerated"],
+                            row["UserPrincipalName"],
+                            row["IPAddress"],
+                            row["AppDisplayName"]))
+                        {
+                            continue;
+                        }
+
+                        await _alertEngine.ProcessSigninLogAsync(
+                            GetTimestamp(row["TimeGenerated"]),
+                            row["UserPrincipalName"]?.ToString() ?? "",
+                            row["IPAddress"]?.ToString() ?? "",
+                            row["AppDisplayName"]?.ToString() ?? "",
+                            row["Location"]?.ToString() ?? "",
+                            row["DeviceDetail"]?.ToString() ?? "",
+                            row["ConditionalAccessStatus"]?.ToString() ?? "",
+                            row["ResultType"]?.ToString() ?? "",
+                            row["ResultDescription"]?.ToString() ?? "",
                             stoppingToken
                         );
                     }

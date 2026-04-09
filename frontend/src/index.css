@@ -169,7 +169,7 @@ body {
   margin-left: 0;
 }
 .sidebar.closed .nav-item {
-  padding: 0.8rem 1rem; /* Same padding as open, flex gap/margins shrink smoothly */
+  padding: 0.8rem 19px; /* Shift padding to perfectly center 16px icon in 54px width */
   position: relative;
   overflow: visible; /* Let tooltip hang out */
   justify-content: flex-start; /* Keep it left-aligned to slide cleanly */
@@ -657,6 +657,28 @@ thead th::-webkit-resizer {
 
 .asset-card {
   padding: 1rem;
+}
+
+@keyframes pulse-starting {
+  0% { box-shadow: 0 0 0 0 rgba(42, 126, 255, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(42, 126, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(42, 126, 255, 0); }
+}
+
+@keyframes pulse-stopping {
+  0% { box-shadow: 0 0 0 0 rgba(255, 126, 42, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(255, 126, 42, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 126, 42, 0); }
+}
+
+.asset-card.anim-starting {
+  animation: pulse-starting 2s infinite ease-out;
+  border-color: var(--warning);
+}
+
+.asset-card.anim-stopping {
+  animation: pulse-stopping 2s infinite ease-out;
+  border-color: var(--warning);
 }
 
 .asset-card-header {

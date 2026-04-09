@@ -259,7 +259,9 @@ app.MapGet("/api/signin-logs", async (int? page, int? pageSize, LogsQueryClient 
     var normalizedPage = QueryHelper.NormalizePage(page);
     var normalizedPageSize = QueryHelper.NormalizePageSize(pageSize, 25);
     var skip = (normalizedPage - 1) * normalizedPageSize;
-    var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
+      
+      // Increased lookback window to 30 days to see older sign-ins
+      var timeRange = new QueryTimeRange(TimeSpan.FromDays(30));
 
     var response = await client.QueryWorkspaceAsync(
         workspaceId,
@@ -273,9 +275,40 @@ app.MapGet("/api/signin-logs", async (int? page, int? pageSize, LogsQueryClient 
         timeRange,
         cancellationToken: cancellationToken);
 
+      return Results.Ok(new
+      {
+          items = QueryHelper.ProjectRows(response.Value.Table).ToArray(),
+          page = normalizedPage,
+          pageSize = normalizedPageSize,
+          totalCount = QueryHelper.GetScalarCount(totalResponse.Value.Table)
+    logger.LogInformation("Fetch audit-logs: page={Page}, size={Size}", page, pageSize);
+    var workspaceId = CleanSetting(GetSetting(builder.Configuration, "LOG_ANALYTICS_WORKSPACE_ID"));
+
+    if (string.IsNullOrWhiteSpace(workspaceId))
+    {
+        return Results.Problem("LOG_ANALYTICS_WORKSPACE_ID is not configured.", statusCode: 500);
+    }
+
+    var normalizedPage = QueryHelper.NormalizePage(page);
+    var normalizedPageSize = QueryHelper.NormalizePageSize(pageSize, 25);
+    var skip = (normalizedPage - 1) * normalizedPageSize;
+    var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
+
+    var response = await client.QueryWorkspaceAsync(
+        workspaceId,
+        AuditLogsQueries.GetRecentLogsPageQuery(skip, normalizedPageSize),
+        timeRange,
+        cancellationToken: cancellationToken);
+
+    var totalResponse = await client.QueryWorkspaceAsync(
+        workspaceId,
+        AuditLogsQueries.GetRecentLogsCountQuery(),
+        timeRange,
+        cancellationToken: cancellationToken);
+
     var failedResponse = await client.QueryWorkspaceAsync(
         workspaceId,
-        SigninLogsQueries.GetFailedLogsCountQuery(),
+        AuditLogsQueries.GetFailedLogsCountQuery(),
         timeRange,
         cancellationToken: cancellationToken);
 

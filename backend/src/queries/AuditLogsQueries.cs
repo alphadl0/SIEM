@@ -2,7 +2,7 @@ namespace backend.src.queries;
 
 public static class AuditLogsQueries {
 
-public static string GetQuery() => @"
+    public static string GetQuery() => @"
 AuditLogs
 | extend InitiatedByBag = todynamic(column_ifexists('InitiatedBy', dynamic(null)))
 | extend ActorIdentity = coalesce(
@@ -26,4 +26,44 @@ AuditLogs
           TargetResources = tostring(column_ifexists('TargetResources', dynamic([])))
 | order by TimeGenerated desc";
 
+    public static string GetRecentLogsPageQuery(int skip, int take) => $@"
+{GetRecentLogsBaseQuery()}
+| order by TimeGenerated desc
+| serialize RowNumber = row_number()
+| where RowNumber > {skip} and RowNumber <= {skip + take}
+| project-away RowNumber";
+
+    public static string GetRecentLogsCountQuery() => $@"
+{GetRecentLogsBaseQuery()}
+| count";
+
+    public static string GetFailedLogsCountQuery() => $@"
+AuditLogs
+| extend ResultText = tostring(column_ifexists('Result', ''))
+| where tolower(ResultText) != 'success'
+| count";
+
+    private static string GetRecentLogsBaseQuery()
+    {
+        return @"
+AuditLogs
+| extend InitiatedByBag = todynamic(column_ifexists('InitiatedBy', dynamic(null)))
+| extend ActorIdentity = coalesce(
+    tostring(InitiatedByBag.user.userPrincipalName),
+    tostring(InitiatedByBag.user.displayName),
+    tostring(InitiatedByBag.app.displayName),
+    tostring(InitiatedByBag.app.servicePrincipalId),
+    'Unknown')
+| extend ActivityName = coalesce(tostring(column_ifexists('ActivityDisplayName', '')), tostring(column_ifexists('OperationName', '')))
+| extend ResultText = tostring(column_ifexists('Result', ''))
+| extend ResultDescriptionText = tostring(column_ifexists('ResultDescription', ''))
+| project TimeGenerated,
+          ActivityDisplayName = ActivityName,
+          Category = tostring(column_ifexists('Category', '')),
+          Identity = ActorIdentity,
+          LoggedByService = tostring(column_ifexists('LoggedByService', '')),
+          Result = ResultText,
+          ResultDescription = ResultDescriptionText,
+          TargetResources = tostring(column_ifexists('TargetResources', dynamic([])))";
+    }
 }

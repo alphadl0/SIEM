@@ -10,6 +10,7 @@ import {
   Activity,
   ShieldAlert,
   CircleUserRound,
+  FileText,
   Search,
   Database,
   LayoutDashboard,
@@ -21,6 +22,7 @@ import Dashboard from "./pages/Dashboard";
 import AlertHistory from "./pages/AlertHistory";
 import SecuritySearch from "./pages/SecuritySearch";
 import AccessLog from "./pages/AccessLog";
+import AuditLog from "./pages/AuditLog";
 import ProcessMonitor from "./pages/ProcessMonitor";
 import AssetExplorer from "./pages/AssetExplorer";
 import AzureActivity from "./pages/AzureActivity";
@@ -45,6 +47,9 @@ function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
           <NavLink to="/access-log" data-title="Identity Logs" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
             <CircleUserRound size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Identity Logs</span>
+          </NavLink>
+          <NavLink to="/audit-log" data-title="Audit Logs" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
+            <FileText size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Audit Logs</span>
           </NavLink>
           <NavLink to="/processes" data-title="Forensic Processes" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
             <Activity size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Forensic Processes</span>
@@ -202,6 +207,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/alerts" element={<AlertHistory />} />
               <Route path="/access-log" element={<AccessLog />} />
+              <Route path="/audit-log" element={<AuditLog />} />
               <Route path="/processes" element={<ProcessMonitor />} />
               <Route path="/infrastructure-assets" element={<AssetExplorer />} />
               <Route path="/azure-activity" element={<AzureActivity />} />

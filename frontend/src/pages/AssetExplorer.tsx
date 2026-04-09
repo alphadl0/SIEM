@@ -68,10 +68,18 @@ export default function AssetExplorer() {
               if (tone === 'online') borderColor = 'var(--secondary)';
               else if (tone === 'medium') borderColor = 'var(--warning)';
 
+              let animClass = '';
+              const normalizedStatus = vm.status?.trim().toLowerCase() ?? '';
+              if (normalizedStatus.includes('starting') || normalizedStatus.includes('restarting')) {
+                animClass = 'anim-starting';
+              } else if (normalizedStatus.includes('stopping') || normalizedStatus.includes('deallocating')) {
+                animClass = 'anim-stopping';
+              }
+
               return (
               <div
                 key={`vm-${i}`}
-                className="card asset-card"
+                className={`card asset-card ${animClass}`}
                 style={{ borderLeft: `4px solid ${borderColor}` }}
               >
                 <div className="asset-card-header">

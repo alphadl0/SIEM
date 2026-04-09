@@ -30,7 +30,7 @@ SigninLogs
 
     public static string GetRecentLogsPageQuery(int skip, int take) => $@"
 {GetRecentLogsBaseQuery()}
-| order by TimeGenerated desc
+| order by CreatedDateTime desc
 | serialize RowNumber = row_number()
 | where RowNumber > {skip} and RowNumber <= {skip + take}
 | project-away RowNumber";
@@ -39,27 +39,31 @@ SigninLogs
 {GetRecentLogsBaseQuery()}
 | count";
 
-    public static string GetFailedLogsCountQuery() => $@"
-SigninLogs
-| where ResultType != '0'
-| count";
-
     private static string GetRecentLogsBaseQuery()
     {
         return $@"
 SigninLogs
 | extend LocationDetailsBag = todynamic(column_ifexists('LocationDetails', dynamic(null)))
 | extend DeviceDetailBag = todynamic(column_ifexists('DeviceDetail', dynamic(null)))
-| project TimeGenerated,
+| project CreatedDateTime = todatetime(column_ifexists('CreatedDateTime', TimeGenerated)),
           UserPrincipalName = tostring(column_ifexists('UserPrincipalName', '')),
-          AppDisplayName = tostring(column_ifexists('AppDisplayName', '')),     
+          UserDisplayName = tostring(column_ifexists('UserDisplayName', '')),
+          UserType = tostring(column_ifexists('UserType', '')),
           IPAddress = tostring(column_ifexists('IPAddress', '')),
-          City = trim(' ', tostring(LocationDetailsBag.city)),
-          Country = trim(' ', tostring(LocationDetailsBag.countryOrRegion)),
-          Location = trim(' ', tostring(column_ifexists('Location', ''))),
-          DeviceName = tostring(DeviceDetailBag.displayName),
-          DeviceOperatingSystem = tostring(DeviceDetailBag.operatingSystem),
-          DeviceBrowser = tostring(DeviceDetailBag.browser),
-          ResultType = tostring(column_ifexists('ResultType', ''))";
+          LocationDetails = LocationDetailsBag,
+          DeviceDetail = DeviceDetailBag,
+          RiskLevelAggregated = tostring(column_ifexists('RiskLevelAggregated', '')),
+          RiskLevelDuringSignIn = tostring(column_ifexists('RiskLevelDuringSignIn', '')),
+          RiskState = tostring(column_ifexists('RiskState', '')),
+          RiskEventTypes_V2 = tostring(column_ifexists('RiskEventTypes_V2', '')),
+          RiskDetail = tostring(column_ifexists('RiskDetail', '')),
+          ConditionalAccessStatus = tostring(column_ifexists('ConditionalAccessStatus', '')),
+          AppDisplayName = tostring(column_ifexists('AppDisplayName', '')),
+          ClientAppUsed = tostring(column_ifexists('ClientAppUsed', '')),
+          ResourceDisplayName = tostring(column_ifexists('ResourceDisplayName', '')),
+          ResultSignature = tostring(column_ifexists('ResultSignature', column_ifexists('ResultType', ''))),
+          ResultDescription = tostring(column_ifexists('ResultDescription', '')),
+          Identity = tostring(column_ifexists('Identity', '')),
+          OperationName = tostring(column_ifexists('OperationName', ''))";
     }
 }

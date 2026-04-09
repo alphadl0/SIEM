@@ -108,7 +108,7 @@ public class SqlStatusPoller : BackgroundService
                 }
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }
 }

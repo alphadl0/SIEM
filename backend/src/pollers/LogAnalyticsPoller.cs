@@ -200,7 +200,6 @@ public class LogAnalyticsPoller : BackgroundService
                             row["DeviceDetail"]?.ToString() ?? "",
                             row["ConditionalAccessStatus"]?.ToString() ?? "",   
                             row["ResultType"]?.ToString() ?? "",
-                            row["ResultDescription"]?.ToString() ?? "",
                             stoppingToken
                         );
                     }

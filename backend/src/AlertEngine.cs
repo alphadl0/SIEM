@@ -146,11 +146,11 @@ public class AlertEngine
         }
     }
 
-    public async Task ProcessSigninLogAsync(DateTime timestamp, string upn, string ip, string app, string location, string deviceStr, string authStatus, string resultType, string resultDesc, CancellationToken ct, bool broadcast = true)
+    public async Task ProcessSigninLogAsync(DateTime timestamp, string upn, string ip, string app, string location, string deviceStr, string authStatus, string resultType, CancellationToken ct, bool broadcast = true)
     {
         if (resultType != "0")
         {
-            await CreateAlert(timestamp, "Failed Entra ID Sign-in", "Low", "Azure AD", ip, $"User {upn} failed to sign into {app}. Reason: {resultDesc}", ct, broadcast);
+            await CreateAlert(timestamp, "Failed Entra ID Sign-in", "Low", "Azure AD", ip, $"User {upn} failed to sign into {app}. Reason: {resultType}", ct, broadcast);
         }
 
         if (!string.IsNullOrEmpty(location) && (location.Contains("Unknown") || location.Length < 3))

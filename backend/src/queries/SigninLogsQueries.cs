@@ -9,7 +9,6 @@ SigninLogs
 | extend NormalizedLocation = strcat(tostring(LocationDetailsBag.countryOrRegion), iff(isempty(tostring(LocationDetailsBag.city)), '', strcat(' / ', tostring(LocationDetailsBag.city))))
 | extend NormalizedDevice = strcat(tostring(DeviceDetailBag.operatingSystem), iff(isempty(tostring(DeviceDetailBag.browser)), '', strcat(' / ', tostring(DeviceDetailBag.browser))))
 | extend ResultTypeText = tostring(column_ifexists('ResultType', ''))
-| extend ResultDescriptionText = tostring(column_ifexists('ResultDescription', ''))
 | extend ConditionalAccessStatusText = tostring(column_ifexists('ConditionalAccessStatus', ''))
 | extend Location = iff(isempty(trim(' ', NormalizedLocation)), tostring(column_ifexists('Location', 'Unknown')), trim(' ', NormalizedLocation))
 | where ResultTypeText != '0' or isempty(Location) or strlen(Location) < 3 or Location has 'Unknown'
@@ -22,8 +21,7 @@ SigninLogs
           DeviceDetail = iff(isempty(trim(' ', NormalizedDevice)), 'Unknown', trim(' ', NormalizedDevice)),
           AuthenticationDetails = tostring(column_ifexists('AuthenticationDetails', '')),
           ConditionalAccessStatus = ConditionalAccessStatusText,
-          ResultType = ResultTypeText,
-          ResultDescription = ResultDescriptionText
+          ResultType = ResultTypeText
 | where isnotempty(UserPrincipalName) or isnotempty(IPAddress)
 | order by TimeGenerated desc";
 
@@ -71,7 +69,6 @@ SigninLogs
           ClientAppUsed = tostring(column_ifexists('ClientAppUsed', '')),
           ResourceDisplayName = tostring(column_ifexists('ResourceDisplayName', '')),
           ResultSignature = tostring(column_ifexists('ResultSignature', column_ifexists('ResultType', ''))),
-          ResultDescription = tostring(column_ifexists('ResultDescription', '')),
           Identity = tostring(column_ifexists('Identity', '')),
           OperationName = tostring(column_ifexists('OperationName', ''))";
     }

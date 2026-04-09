@@ -42,7 +42,6 @@ interface AccessLogRow {
   ClientAppUsed?: string;
   ResourceDisplayName?: string;
   ResultSignature?: string;
-  ResultDescription?: string;
   Identity?: string;
   OperationName?: string;
 }
@@ -116,7 +115,6 @@ export default function AccessLog() {
           clientAppUsed: log.ClientAppUsed,
           resourceDisplayName: log.ResourceDisplayName,
           resultSignature: log.ResultSignature,
-          resultDescription: log.ResultDescription,
           identity: log.Identity,
           operationName: log.OperationName,
         };
@@ -159,7 +157,6 @@ export default function AccessLog() {
                 <th>Client App Used</th>
                 <th>Resource Display Name</th>
                 <th>Result Signature</th>
-                <th>Result Description</th>
                 <th>Identity</th>
                 <th>Operation Name</th>
               </tr>
@@ -188,14 +185,13 @@ export default function AccessLog() {
                   <td className="identity-log-cell">{log.clientAppUsed}</td>
                   <td className="identity-log-cell">{log.resourceDisplayName}</td>
                   <td className="identity-log-cell">{log.resultSignature}</td>
-                  <td className="identity-log-cell">{log.resultDescription}</td>
                   <td className="identity-log-cell">{log.identity}</td>
                   <td className="identity-log-cell">{log.operationName}</td>
                 </tr>
               ))}
               {parsedLogs.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={20} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={19} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No sign-in logs found for the selected time period.
                   </td>
                 </tr>

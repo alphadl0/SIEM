@@ -128,7 +128,6 @@ public class AlertHistoryService
                     row["DeviceDetail"]?.ToString() ?? string.Empty,
                     row["ConditionalAccessStatus"]?.ToString() ?? string.Empty,
                     row["ResultType"]?.ToString() ?? string.Empty,
-                    row["ResultDescription"]?.ToString() ?? string.Empty,
                     cancellationToken,
                     broadcast: false);
             }

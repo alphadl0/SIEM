@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using backend.src.queries;
+using backend.src.helpers;
 using System.Collections.Concurrent;
 using System;
 using System.Linq;
@@ -17,21 +18,23 @@ public class LogAnalyticsPoller : BackgroundService
     private readonly IHubContext<SiemHub> _hubContext;
     private readonly ILogger<LogAnalyticsPoller> _logger;
     private readonly AlertEngine _alertEngine;
+    private readonly LogsQueryClient _client;
     private readonly string _workspaceId;
     private readonly ConcurrentDictionary<string, DateTime> _processedKeys = new();
     private DateTime _lastKeyCleanupUtc = DateTime.MinValue;
 
-    public LogAnalyticsPoller(IHubContext<SiemHub> hubContext, ILogger<LogAnalyticsPoller> logger, AlertEngine alertEngine)
+    public LogAnalyticsPoller(IHubContext<SiemHub> hubContext, ILogger<LogAnalyticsPoller> logger, AlertEngine alertEngine, LogsQueryClient client)
     {
         _hubContext = hubContext;
         _logger = logger;
         _alertEngine = alertEngine;
+        _client = client;
         _workspaceId = (Environment.GetEnvironmentVariable("LOG_ANALYTICS_WORKSPACE_ID") ?? "").Trim().Replace("\r", "").Replace("\n", "");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var client = new LogsQueryClient(new DefaultAzureCredential());
+        var client = _client;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -211,13 +214,6 @@ public class LogAnalyticsPoller : BackgroundService
 
     private static DateTime GetTimestamp(object? value)
     {
-        return value switch
-        {
-            DateTimeOffset offset => offset.UtcDateTime,
-            DateTime timestamp when timestamp.Kind == DateTimeKind.Utc => timestamp,
-            DateTime timestamp when timestamp.Kind == DateTimeKind.Local => timestamp.ToUniversalTime(),
-            DateTime timestamp => DateTime.SpecifyKind(timestamp, DateTimeKind.Utc),
-            _ => DateTime.UtcNow
-        };
+        return TimestampHelper.GetTimestamp(value);
     }
 }

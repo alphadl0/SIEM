@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "URA/pZDc3WU=",
+  "dgSpecHash": "cPqwVcXVbAo=",
   "success": true,
   "projectFilePath": "C:\\Users\\mamad\\OneDrive\\Desktop\\SIEM\\backend\\backend.csproj",
   "expectedPackageFiles": [
@@ -10,6 +10,7 @@
     "C:\\Users\\mamad\\.nuget\\packages\\azure.resourcemanager\\1.13.2\\azure.resourcemanager.1.13.2.nupkg.sha512",
     "C:\\Users\\mamad\\.nuget\\packages\\azure.resourcemanager.compute\\1.14.0\\azure.resourcemanager.compute.1.14.0.nupkg.sha512",
     "C:\\Users\\mamad\\.nuget\\packages\\azure.resourcemanager.network\\1.14.0\\azure.resourcemanager.network.1.14.0.nupkg.sha512",
+    "C:\\Users\\mamad\\.nuget\\packages\\azure.resourcemanager.sql\\1.3.0\\azure.resourcemanager.sql.1.3.0.nupkg.sha512",
     "C:\\Users\\mamad\\.nuget\\packages\\dotnetenv\\3.1.1\\dotnetenv.3.1.1.nupkg.sha512",
     "C:\\Users\\mamad\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\10.0.5\\microsoft.aspnetcore.authentication.jwtbearer.10.0.5.nupkg.sha512",
     "C:\\Users\\mamad\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\10.0.3\\microsoft.bcl.asyncinterfaces.10.0.3.nupkg.sha512",

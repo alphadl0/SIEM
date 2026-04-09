@@ -3,3 +3,4 @@ obj/
 wwwroot/
 verify-vm-status/
 .env
+.env.local

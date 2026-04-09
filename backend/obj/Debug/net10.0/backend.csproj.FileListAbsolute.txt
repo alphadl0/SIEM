@@ -150,3 +150,4 @@ C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\compressed\zsaajp
 C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\compressed\7d52tkkma6-{0}-180dmtdpho-180dmtdpho.gz
 C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\compressed\l1p1mz988u-{0}-g3h7a9wx5y-g3h7a9wx5y.gz
 C:\Users\mamad\OneDrive\Desktop\SIEM\backend\obj\Debug\net10.0\compressed\pcllgev4l3-{0}-kevzen1psw-kevzen1psw.gz
+C:\Users\mamad\OneDrive\Desktop\SIEM\backend\bin\Debug\net10.0\Azure.ResourceManager.Sql.dll

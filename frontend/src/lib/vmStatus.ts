@@ -66,9 +66,9 @@ export function getVmAssetLabel(status: string | null | undefined) {
     case "stopping":
       return "STOPPING";
     case "deallocating":
-      return "DEALLOCATING";
+      return "STOPPING";
     case "deallocated":
-      return "DEALLOCATED";
+      return "STOPPED";
     case "stopped":
       return "STOPPED";
     default:
@@ -87,9 +87,9 @@ export function getVmDashboardLabel(status: string | null | undefined) {
     case "stopping":
       return "VM stopping";
     case "deallocating":
-      return "VM deallocating";
+      return "VM stopping";
     case "deallocated":
-      return "VM deallocated";
+      return "VM stopped";
     case "stopped":
       return "VM stopped";
     default:

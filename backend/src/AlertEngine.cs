@@ -1,6 +1,7 @@
 using backend.src.services;
 using Microsoft.AspNetCore.SignalR;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -23,8 +24,7 @@ public class Alert
 public class AlertEngine
 {
     private const int MaxAlertHistory = 2000;
-    private readonly Dictionary<string, Alert> _alerts = new(StringComparer.Ordinal);
-    private readonly object _alertsSync = new();
+    private readonly ConcurrentDictionary<string, Alert> _alerts = new(StringComparer.Ordinal);
     private readonly GeoService _geoService;
     private readonly IHubContext<SiemHub> _hubContext;
 
@@ -36,39 +36,38 @@ public class AlertEngine
 
     public async Task ProcessSecurityEventAsync(DateTime timestamp, string computer, int eventId, string account, string ipAddress, string targetAccount, string processName, string memberName, CancellationToken ct, bool broadcast = true)
     {
-        if (eventId == 4624)
+        switch (eventId)
         {
-            await CreateAlert(timestamp, "Logon Succeeded (Windows)", "Low", computer, ipAddress, $"User {account} logged in successfully.", ct, broadcast);
-        }
+            case 4624:
+                await CreateAlert(timestamp, "Logon Succeeded (Windows)", "Low", computer, ipAddress, $"User {account} logged in successfully.", ct, broadcast);
+                break;
 
-        if (eventId == 4625)
-        {
-            await CreateAlert(timestamp, "Failed Login Attempt (Windows)", "Medium", computer, ipAddress, $"Failed login attempt for account: {account}", ct, broadcast);
-        }
+            case 4625:
+                await CreateAlert(timestamp, "Failed Login Attempt (Windows)", "Medium", computer, ipAddress, $"Failed login attempt for account: {account}", ct, broadcast);
+                break;
 
-        if (eventId == 4672)
-        {
-            await CreateAlert(timestamp, "Privilege Escalation (Windows)", "High", computer, ipAddress, $"Special privileges assigned to: {account}", ct, broadcast);
-        }
+            case 4672:
+                await CreateAlert(timestamp, "Privilege Escalation (Windows)", "High", computer, ipAddress, $"Special privileges assigned to: {account}", ct, broadcast);
+                break;
 
-        if (eventId == 4688 && (processName.ToLower().Contains("powershell.exe") || processName.ToLower().Contains("cmd.exe")))
-        {
-            await CreateAlert(timestamp, "Suspicious Process Execution", "Medium", computer, ipAddress, $"Process started: {processName} by {account}", ct, broadcast);
-        }
+            case 4688:
+                if (processName.Contains("powershell.exe", StringComparison.OrdinalIgnoreCase) || processName.Contains("cmd.exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    await CreateAlert(timestamp, "Suspicious Process Execution", "Medium", computer, ipAddress, $"Process started: {processName} by {account}", ct, broadcast);
+                }
+                break;
 
-        if (eventId == 4720)
-        {
-            await CreateAlert(timestamp, "New Account Created", "High", computer, ipAddress, $"New user account created: {targetAccount} by {account}", ct, broadcast);
-        }
+            case 4720:
+                await CreateAlert(timestamp, "New Account Created", "High", computer, ipAddress, $"New user account created: {targetAccount} by {account}", ct, broadcast);
+                break;
 
-        if (eventId == 4732)
-        {
-            await CreateAlert(timestamp, "Security Group Membership Change", "Medium", computer, ipAddress, $"Member {memberName} added to group by {account}", ct, broadcast);
-        }
+            case 4732:
+                await CreateAlert(timestamp, "Security Group Membership Change", "Medium", computer, ipAddress, $"Member {memberName} added to group by {account}", ct, broadcast);
+                break;
 
-        if (eventId == 4663)
-        {
-            await CreateAlert(timestamp, "Sensitive Object Access", "Medium", computer, ipAddress, $"Access attempt on sensitive object by {account}", ct, broadcast);
+            case 4663:
+                await CreateAlert(timestamp, "Sensitive Object Access", "Medium", computer, ipAddress, $"Access attempt on sensitive object by {account}", ct, broadcast);
+                break;
         }
     }
 
@@ -150,13 +149,14 @@ public class AlertEngine
 
     public async Task ProcessAuditLogAsync(DateTime timestamp, string activity, string category, string identity, string service, string result, string resultDesc, string targets, CancellationToken ct, bool broadcast = true)
     {
-        if (result != "success" && !string.IsNullOrEmpty(result))
+        if (!string.Equals(result, "success", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(result))
         {
             await CreateAlert(timestamp, "Failed Tenant Operation", "Low", "Entra ID Audit", identity, $"Administrative action '{activity}' failed. Reason: {resultDesc}", ct, broadcast);
         }
 
-        string act = activity.ToLower();
-        if (act.Contains("delete user") || act.Contains("add member to role") || act.Contains("reset password"))
+        if (activity.Contains("delete user", StringComparison.OrdinalIgnoreCase) ||
+            activity.Contains("add member to role", StringComparison.OrdinalIgnoreCase) ||
+            activity.Contains("reset password", StringComparison.OrdinalIgnoreCase))
         {
             await CreateAlert(timestamp, "Critical Identity Change", "High", "Entra ID Audit", identity, $"Security-sensitive operation detected: {activity} targeting {targets}", ct, broadcast);
         }
@@ -164,7 +164,8 @@ public class AlertEngine
 
     public async Task ProcessRiskyUserAsync(DateTime timestamp, string upn, string displayName, string riskLevel, string riskState, string riskDetail, CancellationToken ct, bool broadcast = true)
     {
-        if (riskState == "atRisk" || riskState == "confirmedCompromised")
+        if (string.Equals(riskState, "atRisk", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(riskState, "confirmedCompromised", StringComparison.OrdinalIgnoreCase))
         {
             string severity = riskLevel switch
             {
@@ -178,7 +179,8 @@ public class AlertEngine
 
     public async Task ProcessUserRiskEventAsync(DateTime timestamp, string upn, string displayName, string eventType, string riskLevel, string riskState, string riskDetail, string ip, string location, CancellationToken ct, bool broadcast = true)
     {
-        if (riskState != "remediated" && riskState != "dismissed")
+        if (!string.Equals(riskState, "remediated", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(riskState, "dismissed", StringComparison.OrdinalIgnoreCase))
         {
             string severity = riskLevel switch
             {
@@ -190,39 +192,22 @@ public class AlertEngine
         }
     }
 
-    public PagedResult<Alert> GetRecentAlertsPage(int page, int pageSize, string? searchTerm = null, string? severity = null, bool? excludeAzure = null)
+    public PagedResult<Alert> GetRecentAlertsPage(int page, int pageSize, bool? excludeAzure = null)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        Alert[] filteredAlerts;
-        lock (_alertsSync)
+        var query = _alerts.Values.AsEnumerable();
+
+        if (excludeAzure == true)
         {
-            var query = _alerts.Values.AsEnumerable();
-
-            if (excludeAzure == true)
-            {
-                query = query.Where(a => a.SourceIp != "Azure RM" && !a.Title.ToLowerInvariant().Contains("cloud resource"));
-            }
-
-            if (!string.IsNullOrWhiteSpace(severity) && !string.Equals(severity, "all", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(a => string.Equals(a.Severity, severity, StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (!string.IsNullOrWhiteSpace(searchTerm))
-            {
-                var searchLower = searchTerm.ToLowerInvariant();
-                query = query.Where(a => 
-                    a.Vm.ToLowerInvariant().Contains(searchLower) || 
-                    a.Description.ToLowerInvariant().Contains(searchLower) ||
-                    a.Title.ToLowerInvariant().Contains(searchLower));
-            }
-
-            filteredAlerts = query
-                .OrderByDescending(alert => alert.Timestamp)
-                .ToArray();
+            query = query.Where(a => !string.Equals(a.SourceIp, "Azure RM", StringComparison.OrdinalIgnoreCase) &&
+                                     !a.Title.Contains("cloud resource", StringComparison.OrdinalIgnoreCase));
         }
+
+        var filteredAlerts = query
+            .OrderByDescending(alert => alert.Timestamp)
+            .ToArray();
 
         var totalCount = filteredAlerts.Length;
         var items = filteredAlerts
@@ -291,27 +276,29 @@ public class AlertEngine
 
     private bool StoreAlert(Alert alert)
     {
-        lock (_alertsSync)
+        var key = CreateAlertKey(alert);
+        if (!_alerts.TryAdd(key, alert))
         {
-            var key = CreateAlertKey(alert);
-            if (_alerts.ContainsKey(key))
-            {
-                return false;
-            }
-
-            _alerts[key] = alert;
-
-            while (_alerts.Count > MaxAlertHistory)
-            {
-                var oldestAlert = _alerts
-                    .OrderBy(entry => entry.Value.Timestamp)
-                    .First();
-
-                _alerts.Remove(oldestAlert.Key);
-            }
-
-            return true;
+            return false; // Duplicate — already exists
         }
+
+        // Evict oldest entries if over capacity
+        // Using a snapshot approach to avoid O(n) inside a hot path
+        if (_alerts.Count > MaxAlertHistory)
+        {
+            var keysToRemove = _alerts
+                .OrderBy(entry => entry.Value.Timestamp)
+                .Take(_alerts.Count - MaxAlertHistory)
+                .Select(entry => entry.Key)
+                .ToList();
+
+            foreach (var oldKey in keysToRemove)
+            {
+                _alerts.TryRemove(oldKey, out _);
+            }
+        }
+
+        return true;
     }
 
     private static DateTime NormalizeTimestamp(DateTime timestamp)
@@ -333,9 +320,9 @@ public class AlertEngine
     {
         return string.Join("|",
             alert.Timestamp.ToUniversalTime().ToString("O"),
+            alert.Title.Trim(),
             alert.Vm.Trim(),
             alert.SourceIp.Trim(),
             alert.Description.Trim());
     }
 }
-

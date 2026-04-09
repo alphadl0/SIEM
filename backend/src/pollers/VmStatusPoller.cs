@@ -1,4 +1,6 @@
 using Azure.Identity;
+using Azure.Monitor.Query;
+using Azure.Monitor.Query.Models;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Compute;
 using Azure.ResourceManager.Compute.Models;
@@ -8,6 +10,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using backend.src.services;
+using backend.src.helpers;
 using System;
 using System.Linq;
 using System.Threading;
@@ -20,18 +23,21 @@ public class VmStatusPoller : BackgroundService
     private readonly IHubContext<SiemHub> _hubContext;
     private readonly ILogger<VmStatusPoller> _logger;
     private readonly VmRunCommandService _vmRunCommandService;
+    private readonly DefaultAzureCredential _credential;
 
-    public VmStatusPoller(IHubContext<SiemHub> hubContext, ILogger<VmStatusPoller> logger, VmRunCommandService vmRunCommandService)
+    public VmStatusPoller(IHubContext<SiemHub> hubContext, ILogger<VmStatusPoller> logger, VmRunCommandService vmRunCommandService, DefaultAzureCredential credential)
     {
         _hubContext = hubContext;
         _logger = logger;
         _vmRunCommandService = vmRunCommandService;
+        _credential = credential;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var credential = new DefaultAzureCredential();
+        var credential = _credential;
         ArmClient client = new ArmClient(credential);
+        var metricsClient = new MetricsQueryClient(credential);
         var subId = Environment.GetEnvironmentVariable("AZURE_SUBSCRIPTION_ID")?.Trim().Replace("\r", "").Replace("\n", "");
         var rgName = Environment.GetEnvironmentVariable("AZURE_RESOURCE_GROUP")?.Trim().Replace("\r", "").Replace("\n", "");
         
@@ -52,18 +58,78 @@ public class VmStatusPoller : BackgroundService
                         {
                             count++;
                             var response = await vm.InstanceViewAsync(cancellationToken: stoppingToken);
-                            var status = GetPowerStatus(response.Value);
-                            var isRunning = IsRunningStatus(status);
+                            var status = VmPowerStatusHelper.GetPowerStatus(response.Value);
+                            var isRunning = VmPowerStatusHelper.IsRunningStatus(status);
                             var cachedInsights = await _vmRunCommandService.GetCachedOrFallbackGuestInsightsAsync(vm, stoppingToken);
 
-                            await PublishVmStatusAsync(vm, status, cachedInsights, stoppingToken);
+                            double? networkInMbps = null;
+                            double? networkOutMbps = null;
+                            double? cpuPercent = null;
+
+                            if (isRunning)
+                            {
+                                try
+                                {
+                                    var metricsResponse = await metricsClient.QueryResourceAsync(
+                                        vm.Id,
+                                        new[] { "Percentage CPU", "Network In", "Network Out" },
+                                        new MetricsQueryOptions
+                                        {
+                                            TimeRange = new QueryTimeRange(TimeSpan.FromMinutes(15)),
+                                            Granularity = TimeSpan.FromMinutes(5)
+                                        },
+                                        cancellationToken: stoppingToken
+                                    );
+
+                                    // CPU percentage
+                                    var cpuMetric = metricsResponse.Value.Metrics.FirstOrDefault(m => m.Name.Equals("Percentage CPU", StringComparison.OrdinalIgnoreCase));
+                                    if (cpuMetric != null)
+                                    {
+                                        var lastCpuVal = cpuMetric.TimeSeries.SelectMany(t => t.Values).LastOrDefault(v => v.Average.HasValue);
+                                        if (lastCpuVal != null && lastCpuVal.Average.HasValue)
+                                        {
+                                            cpuPercent = Math.Round(lastCpuVal.Average.Value, 1);
+                                        }
+                                    }
+
+                                    // Network In
+                                    var netInMetric = metricsResponse.Value.Metrics.FirstOrDefault(m => m.Name.Equals("Network In", StringComparison.OrdinalIgnoreCase));
+                                    if (netInMetric != null)
+                                    {
+                                        var lastVal = netInMetric.TimeSeries.SelectMany(t => t.Values).LastOrDefault(v => v.Total.HasValue || v.Average.HasValue);
+                                        if (lastVal != null)
+                                        {
+                                            var bytesIn = lastVal.Total ?? lastVal.Average;
+                                            if (bytesIn.HasValue) networkInMbps = Math.Round((bytesIn.Value * 8) / (5 * 60) / 1000000.0, 2);
+                                        }
+                                    }
+
+                                    // Network Out
+                                    var netOutMetric = metricsResponse.Value.Metrics.FirstOrDefault(m => m.Name.Equals("Network Out", StringComparison.OrdinalIgnoreCase));
+                                    if (netOutMetric != null)
+                                    {
+                                        var lastVal = netOutMetric.TimeSeries.SelectMany(t => t.Values).LastOrDefault(v => v.Total.HasValue || v.Average.HasValue);
+                                        if (lastVal != null)
+                                        {
+                                            var bytesOut = lastVal.Total ?? lastVal.Average;
+                                            if (bytesOut.HasValue) networkOutMbps = Math.Round((bytesOut.Value * 8) / (5 * 60) / 1000000.0, 2);
+                                        }
+                                    }
+                                }
+                                catch (Exception metricEx)
+                                {
+                                    _logger.LogWarning(metricEx, "Failed to fetch metrics for VM {vmName}", vm.Data.Name);
+                                }
+                            }
+
+                            await PublishVmStatusAsync(vm, status, cachedInsights, networkInMbps, networkOutMbps, cpuPercent, stoppingToken);
 
                             if (isRunning)
                             {
                                 var refreshedInsights = await _vmRunCommandService.GetGuestInsightsAsync(vm, isRunning, stoppingToken);
                                 if (!AreEquivalent(cachedInsights, refreshedInsights))
                                 {
-                                    await PublishVmStatusAsync(vm, status, refreshedInsights, stoppingToken);
+                                    await PublishVmStatusAsync(vm, status, refreshedInsights, networkInMbps, networkOutMbps, cpuPercent, stoppingToken);
                                 }
                             }
                         }
@@ -84,11 +150,12 @@ public class VmStatusPoller : BackgroundService
         }
     }
 
-    private async Task PublishVmStatusAsync(VirtualMachineResource vm, string status, VmGuestInsights guestInsights, CancellationToken cancellationToken)
+    private async Task PublishVmStatusAsync(VirtualMachineResource vm, string status, VmGuestInsights guestInsights, double? networkInMbps, double? networkOutMbps, double? cpuPercent, CancellationToken cancellationToken)
     {
         await _hubContext.Clients.Group("security-team").SendAsync("vmStatus", new
         {
             vmName = vm.Data.Name,
+            type = "Virtual Machine",
             status,
             location = vm.Data.Location.DisplayName,
             vmSize = vm.Data.HardwareProfile?.VmSize?.ToString() ?? "Unknown Size",
@@ -99,53 +166,11 @@ public class VmStatusPoller : BackgroundService
             memoryUsedGb = guestInsights.MemoryUsedGb,
             memoryTotalGb = guestInsights.MemoryTotalGb,
             diskUsedGb = guestInsights.DiskUsedGb,
-            diskTotalGb = guestInsights.DiskTotalGb
+            diskTotalGb = guestInsights.DiskTotalGb,
+            networkInMbps,
+            networkOutMbps,
+            cpuPercent
         }, cancellationToken);
-    }
-
-    private static string GetPowerStatus(VirtualMachineInstanceView instanceView)
-    {
-        var powerStatus = instanceView.Statuses
-            .FirstOrDefault(status => status.Code.StartsWith("PowerState/", StringComparison.OrdinalIgnoreCase));
-
-        if (!string.IsNullOrWhiteSpace(powerStatus?.DisplayStatus))
-        {
-            return powerStatus.DisplayStatus.Trim();
-        }
-
-        if (powerStatus?.Code is string powerCode)
-        {
-            return powerCode switch
-            {
-                _ when powerCode.Contains("running", StringComparison.OrdinalIgnoreCase) => "VM running",
-                _ when powerCode.Contains("restarting", StringComparison.OrdinalIgnoreCase) => "VM restarting",
-                _ when powerCode.Contains("starting", StringComparison.OrdinalIgnoreCase) => "VM starting",
-                _ when powerCode.Contains("stopping", StringComparison.OrdinalIgnoreCase) => "VM stopping",
-                _ when powerCode.Contains("deallocating", StringComparison.OrdinalIgnoreCase) => "VM deallocating",
-                _ when powerCode.Contains("deallocated", StringComparison.OrdinalIgnoreCase) => "VM deallocated",
-                _ when powerCode.Contains("stopped", StringComparison.OrdinalIgnoreCase) => "VM stopped",
-                _ => "VM unknown"
-            };
-        }
-
-        // No PowerState entry yet — check ProvisioningState for VMs that are still booting up
-        var provisioningStatus = instanceView.Statuses
-            .FirstOrDefault(status => status.Code.StartsWith("ProvisioningState/", StringComparison.OrdinalIgnoreCase));
-
-        return provisioningStatus?.Code switch
-        {
-            string code when code.Contains("creating", StringComparison.OrdinalIgnoreCase) => "VM starting",
-            string code when code.Contains("updating", StringComparison.OrdinalIgnoreCase) => "VM starting",
-            string code when code.Contains("deleting", StringComparison.OrdinalIgnoreCase) => "VM deallocating",
-            string code when code.Contains("failed", StringComparison.OrdinalIgnoreCase) => "VM stopped",
-            string code when code.Contains("succeeded", StringComparison.OrdinalIgnoreCase) => "VM running",
-            _ => "VM unknown"
-        };
-    }
-
-    private static bool IsRunningStatus(string status)
-    {
-        return status.Contains("running", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool AreEquivalent(VmGuestInsights left, VmGuestInsights right)

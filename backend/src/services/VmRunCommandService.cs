@@ -23,10 +23,12 @@ public class VmRunCommandService
     private readonly ConcurrentDictionary<string, CachedNetworkInsights> _networkInsightsCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, double?> _vmMemoryCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<VmRunCommandService> _logger;
+    private readonly Azure.Identity.DefaultAzureCredential _credential;
 
-    public VmRunCommandService(ILogger<VmRunCommandService> logger)
+    public VmRunCommandService(ILogger<VmRunCommandService> logger, Azure.Identity.DefaultAzureCredential credential)
     {
         _logger = logger;
+        _credential = credential;
     }
 
     public async Task<VmGuestInsights> GetGuestInsightsAsync(VirtualMachineResource vm, bool isRunning, CancellationToken cancellationToken)
@@ -115,7 +117,7 @@ public class VmRunCommandService
 
     private ArmClient CreateArmClient()
     {
-        return new ArmClient(new Azure.Identity.DefaultAzureCredential());
+        return new ArmClient(_credential);
     }
 
     private SubscriptionResource CreateSubscriptionResource()

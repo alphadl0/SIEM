@@ -28,15 +28,15 @@ SigninLogs
 | order by TimeGenerated desc";
 
 
-    public static string GetRecentLogsPageQuery(int skip, int take, string? searchTerm = null, string? status = null) => $@"
-{GetRecentLogsBaseQuery(searchTerm, status)}
+    public static string GetRecentLogsPageQuery(int skip, int take) => $@"
+{GetRecentLogsBaseQuery()}
 | order by TimeGenerated desc
 | serialize RowNumber = row_number()
 | where RowNumber > {skip} and RowNumber <= {skip + take}
 | project-away RowNumber";
 
-    public static string GetRecentLogsCountQuery(string? searchTerm = null, string? status = null) => $@"
-{GetRecentLogsBaseQuery(searchTerm, status)}
+    public static string GetRecentLogsCountQuery() => $@"
+{GetRecentLogsBaseQuery()}
 | count";
 
     public static string GetFailedLogsCountQuery() => $@"
@@ -44,25 +44,8 @@ SigninLogs
 | where ResultType != '0'
 | count";
 
-    private static string GetRecentLogsBaseQuery(string? searchTerm = null, string? status = null)
+    private static string GetRecentLogsBaseQuery()
     {
-        var filter = "";
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            filter += status.ToLower() switch
-            {
-                "success" => "| where ResultType == '0' ",
-                "failed" => "| where ResultType != '0' ",
-                _ => ""
-            };
-        }
-
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            var s = searchTerm.Replace("'", "\\'");
-            filter += $"| where UserPrincipalName has '{s}' or IPAddress has '{s}' or AppDisplayName has '{s}' or Location has '{s}' ";
-        }
-
         return $@"
 SigninLogs
 | extend LocationDetailsBag = todynamic(column_ifexists('LocationDetails', dynamic(null)))
@@ -77,7 +60,6 @@ SigninLogs
           DeviceName = tostring(DeviceDetailBag.displayName),
           DeviceOperatingSystem = tostring(DeviceDetailBag.operatingSystem),
           DeviceBrowser = tostring(DeviceDetailBag.browser),
-          ResultType = tostring(column_ifexists('ResultType', ''))
-{filter}";
+          ResultType = tostring(column_ifexists('ResultType', ''))";
     }
 }

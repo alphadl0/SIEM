@@ -1,5 +1,6 @@
 import React from "react";
 import { Logs, AlertTriangle, Server } from "lucide-react";
+import { formatTimestamp, getSeverityBadgeClass } from "../lib/format";
 import {
   LineChart,
   Line,
@@ -60,7 +61,7 @@ export default function Dashboard() {
       const timestamp = new Date(alert.timestamp);
       const bucketTime = new Date(timestamp);
       bucketTime.setSeconds(0, 0);
-      const name = timestamp.toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const name = timestamp.toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });  // trend chart label — intentionally short format
       const key = bucketTime.toISOString();
       const existing = grouped.get(key);
 
@@ -106,7 +107,7 @@ export default function Dashboard() {
         </div>
         {lastPoll && (
           <div className="text-xs text-secondary">
-            Poll: {new Date(lastPoll.timestamp).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })} •
+            Poll: {formatTimestamp(lastPoll.timestamp)} •
             Status: <span className="text-success">{lastPoll.status}</span>
           </div>
         )}
@@ -176,12 +177,12 @@ export default function Dashboard() {
               ) : (
                 paginatedAlerts.map((alert, idx) => (
                   <tr key={idx}>
-                    <td className="overview-feed-cell overview-feed-timestamp">{new Date(alert.timestamp).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</td>
+                    <td className="overview-feed-cell overview-feed-timestamp">{formatTimestamp(alert.timestamp)}</td>
                     <td className="overview-feed-cell overview-feed-strong">{alert.title}</td>
                     <td className="overview-feed-cell"><span className="badge neutral overview-feed-truncate">{alert.vm}</span></td>
                     <td className="overview-feed-cell">{alert.sourceIp}</td>
                     <td className="overview-feed-cell">
-                      <span className={`badge ${alert.severity === "Critical" ? "critical" : alert.severity === "High" ? "high" : "medium"} overview-feed-status-badge`}>
+                      <span className={`badge ${getSeverityBadgeClass(alert.severity)} overview-feed-status-badge`}>
                         {alert.severity}
                       </span>
                     </td>

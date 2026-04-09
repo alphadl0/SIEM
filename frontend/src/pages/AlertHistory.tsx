@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { ShieldAlert } from 'lucide-react';
+import { formatTimestamp, getSeverityBadgeClass } from '../lib/format';
 import { useSignalR, type AlertEvent } from '../hooks/useSignalR';
 import { fetchApiJson, type PagedResponse } from '../lib/backend';
-import { FilterBar } from '../components/FilterBar';
 import { Pagination } from '../components/Pagination';
 
 const PAGE_SIZE = 10;
@@ -17,9 +17,6 @@ export default function AlertHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [severity, setSeverity] = useState('all');
-
   const fetchHistory = useCallback(async () => {
     if (!accounts[0]) {
       return;
@@ -27,7 +24,7 @@ export default function AlertHistory() {
 
     try {
       setLoading(true);
-      const url = `/api/alerts?page=${page}&pageSize=${PAGE_SIZE}&searchTerm=${encodeURIComponent(searchTerm)}&severity=${severity}&excludeAzure=true`;
+      const url = `/api/alerts?page=${page}&pageSize=${PAGE_SIZE}&excludeAzure=true`;
       const data = await fetchApiJson<PagedResponse<AlertEvent>>(
         instance,
         accounts[0],
@@ -42,7 +39,7 @@ export default function AlertHistory() {
     } finally {
       setLoading(false);
     }
-  }, [instance, accounts, page, searchTerm, severity]);
+  }, [instance, accounts, page]);
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -50,20 +47,8 @@ export default function AlertHistory() {
     }
   }, [fetchHistory, accounts.length]);
 
-  const onSearch = useCallback((val: string) => {
-    setSearchTerm(val);
-    setPage(1); // Reset to first page
-  }, []);
-
-  const onFilterChange = useCallback((key: string, val: string) => {
-    if (key === 'severity') {
-      setSeverity(val);
-      setPage(1);
-    }
-  }, []);
-
   const filteredLiveAlerts = liveAlerts.filter(a => a.sourceIp !== 'Azure RM' && !a.title.toLowerCase().includes('cloud resource'));
-  const displayedAlerts = (alerts.length > 0 || searchTerm !== '' || severity !== 'all') ? alerts : (page === 1 ? filteredLiveAlerts : []);
+  const displayedAlerts = alerts.length > 0 ? alerts : (page === 1 ? filteredLiveAlerts : []);
   const effectiveTotalCount = totalCount > 0 ? totalCount : displayedAlerts.length;
   const totalPages = Math.max(1, Math.ceil(effectiveTotalCount / PAGE_SIZE));
 
@@ -72,26 +57,6 @@ export default function AlertHistory() {
       <div className="flex justify-between items-center mb-xl">
         <h1 className="m-0 text-xl flex items-center gap-sm"><ShieldAlert size={32} /> Security Incidents</h1>
       </div>
-
-      <FilterBar 
-        onSearch={onSearch}
-        onFilterChange={onFilterChange}
-        placeholder="Filter by Source, Name or ID..."
-        filters={[
-          {
-            key: 'severity',
-            label: 'Severity',
-            value: severity,
-            options: [
-              { label: 'All Levels', value: 'all' },
-              { label: 'Critical', value: 'Critical' },
-              { label: 'High', value: 'High' },
-              { label: 'Medium', value: 'Medium' },
-              { label: 'Low', value: 'Low' }
-            ]
-          }
-        ]}
-      />
 
       <div className="card" style={{ overflowX: 'auto' }}>
         {error && displayedAlerts.length === 0 && <p className="text-critical">{error}</p>}
@@ -109,14 +74,14 @@ export default function AlertHistory() {
             <tbody>
               {displayedAlerts.map((alert, i) => (
                 <tr key={i}>
-                  <td className="incident-cell incident-timestamp" title={new Date(alert.timestamp).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}>
-                    {new Date(alert.timestamp).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  <td className="incident-cell incident-timestamp" title={formatTimestamp(alert.timestamp)}>
+                    {formatTimestamp(alert.timestamp)}
                   </td>
                   <td className="incident-cell incident-strong" title={alert.title}>
                     {alert.title}
                   </td>
                   <td className="incident-cell">
-                    <span className={`badge ${alert.severity === 'Critical' ? 'critical' : alert.severity === 'High' ? 'high' : 'medium'} incident-status-badge`}>
+                    <span className={`badge ${getSeverityBadgeClass(alert.severity)} incident-status-badge`}>
                       {alert.severity}
                     </span>
                   </td>

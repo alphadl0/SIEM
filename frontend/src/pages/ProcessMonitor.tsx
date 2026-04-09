@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { Activity, Cpu, Server } from 'lucide-react';
+import { formatTimestamp } from '../lib/format';
 import { fetchApiJson } from '../lib/backend';
-import { FilterBar } from '../components/FilterBar';
 import { Pagination } from '../components/Pagination';
 
 const PAGE_SIZE = 50;
@@ -20,7 +20,6 @@ export default function ProcessMonitor() {
   const [procs, setProcs] = useState<ProcessRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
 
@@ -76,14 +75,7 @@ export default function ProcessMonitor() {
 
   const filteredProcs = procs.filter(p => {
     if (selectedAsset && p.Computer !== selectedAsset) return false;
-    if (!searchTerm) return true;
-    const s = searchTerm.toLowerCase();
-    return (
-      p.Computer?.toLowerCase().includes(s) ||
-      p.NewProcessName?.toLowerCase().includes(s) ||
-      p.CommandLine?.toLowerCase().includes(s) ||
-      p.Account?.toLowerCase().includes(s)
-    );
+    return true;
   });
 
   const totalCount = filteredProcs.length;
@@ -92,14 +84,6 @@ export default function ProcessMonitor() {
 
   return (
     <div className="fade-in">
-      <FilterBar
-        onSearch={(term) => {
-          setSearchTerm(term);
-          setPage(1);
-        }}
-        placeholder="Filter by endpoint, process or actor..."
-      />
-
       <div className="card" style={{ overflowX: 'auto' }}>
         <h3 className="flex items-center justify-between gap-sm mb-md text-primary">
           <div className="flex items-center gap-sm">
@@ -159,7 +143,7 @@ export default function ProcessMonitor() {
             <tbody>
               {currentProcs.map((p, i) => (
                 <tr key={i}>
-                     <td className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{new Date(p.TimeGenerated).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</td>
+                     <td className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{formatTimestamp(p.TimeGenerated)}</td>
                    <td className="font-semibold">{p.Computer}</td>
                    <td>
                     <div className="flex items-center gap-sm">

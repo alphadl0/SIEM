@@ -1,6 +1,7 @@
 import { CloudRain } from "lucide-react";
 import { useSignalR, type AlertEvent } from "../hooks/useSignalR";
 import { Pagination } from "../components/Pagination";
+import { formatTimestamp, getSeverityBadgeClass } from "../lib/format";
 import React from "react";
 
 const ALERTS_PAGE_SIZE = 15;
@@ -80,7 +81,7 @@ export default function AzureActivity() {
                 paginatedAzure.map((alert: AlertEvent, idx: number) => (
                   <tr key={idx}>
                     <td className="overview-feed-cell overview-feed-timestamp">
-                      {new Date(alert.timestamp).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                      {formatTimestamp(alert.timestamp)}
                     </td>
                     <td className="overview-feed-cell overview-feed-strong">
                       {alert.title}
@@ -93,13 +94,7 @@ export default function AzureActivity() {
                     <td className="overview-feed-cell">{alert.sourceIp}</td>
                     <td className="overview-feed-cell">
                       <span
-                        className={`badge ${
-                          alert.severity === "Critical"
-                            ? "critical"
-                            : alert.severity === "High"
-                            ? "high"
-                            : "medium"
-                        } overview-feed-status-badge`}
+                        className={`badge ${getSeverityBadgeClass(alert.severity)} overview-feed-status-badge`}
                       >
                         {alert.severity}
                       </span>

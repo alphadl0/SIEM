@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { CircleUserRound } from 'lucide-react';
+import { formatTimestamp } from '../lib/format';
 import { fetchApiJson, type PagedResponse } from '../lib/backend';
-import { FilterBar } from '../components/FilterBar';
 import { Pagination } from '../components/Pagination';
 
 const PAGE_SIZE = 10;
@@ -30,9 +30,6 @@ export default function AccessLog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [status, setStatus] = useState('all');
-
   const fetchLogs = useCallback(async () => {
     if (!accounts[0]) {
       return;
@@ -40,7 +37,7 @@ export default function AccessLog() {
 
     try {
       setLoading(true);
-      const url = `/api/signin-logs?page=${page}&pageSize=${PAGE_SIZE}&searchTerm=${encodeURIComponent(searchTerm)}&status=${status}`;
+      const url = `/api/signin-logs?page=${page}&pageSize=${PAGE_SIZE}`;
       const data = await fetchApiJson<PagedResponse<AccessLogRow>>(
         instance,
         accounts[0],
@@ -56,25 +53,13 @@ export default function AccessLog() {
     } finally {
       setLoading(false);
     }
-  }, [instance, accounts, page, searchTerm, status]);
+  }, [instance, accounts, page]);
 
   useEffect(() => {
     if (accounts.length > 0) {
       void fetchLogs();
     }
   }, [fetchLogs, accounts.length]);
-
-  const onSearch = useCallback((val: string) => {
-    setSearchTerm(val);
-    setPage(1);
-  }, []);
-
-  const onFilterChange = useCallback((key: string, val: string) => {
-    if (key === 'status') {
-      setStatus(val);
-      setPage(1);
-    }
-  }, []);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -90,24 +75,6 @@ export default function AccessLog() {
             <h2 className="m-0 text-critical">{failedCount}</h2>
          </div>
       </div>
-
-      <FilterBar 
-        onSearch={onSearch}
-        onFilterChange={onFilterChange}
-        placeholder="Search users, IPs or applications..."
-        filters={[
-          {
-            key: 'status',
-            label: 'Status',
-            value: status,
-            options: [
-              { label: 'All Statuses', value: 'all' },
-              { label: 'Success', value: 'success' },
-              { label: 'Failed', value: 'failed' }
-            ]
-          }
-        ]}
-      />
 
       <div className="card" style={{ overflowX: 'auto' }}>
         <h3 className="flex items-center gap-sm mb-lg text-primary">
@@ -133,7 +100,7 @@ export default function AccessLog() {
                     const isSuccess = log.ResultType === "0";
                     const deviceLabel = getDeviceLabel(log);
                     const deviceParts = getDeviceParts(log);
-                    const timestampLabel = new Date(log.TimeGenerated).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                    const timestampLabel = formatTimestamp(log.TimeGenerated);
                     const identityLabel = log.UserPrincipalName || 'Unknown user';
                     const appLabel = log.AppDisplayName || 'Unknown app';
                     const sourceParts = getSourceLocationParts(log);

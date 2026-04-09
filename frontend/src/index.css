@@ -6,10 +6,11 @@
   --primary-light:   #1a6e87;
   --secondary:       #228B22;   /* Forest Green — success, online badges */  
   --secondary-light: #2aaa2a;
+  --warning:         #d97706;   /* Orange — starting, loading, warning states */
   --destructive:     #8B0000;   /* Dark Red — critical alerts, errors */  
 
   /* Backgrounds */  
-  --bg:              #E4EBE3;   /* Soft Sage — full page background */  
+  --bg:              #F4F5F7;   /* Off-white — full page background */  
   --glass:           rgba(255,255,255,0.55); /* Card backgrounds */  
   --glass-border:    rgba(26,58,26,0.10);    /* Card borders */  
   --mint-selected:   #b9dfc7;   /* Selected dropdown, active nav */  
@@ -46,6 +47,10 @@ body {
   padding: 0;
 }
 
+html {
+  font-size: 13px; /* Reduces overall baseline text size further to maximize UI space */
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -64,10 +69,10 @@ body {
 .text-success   { color: var(--secondary); }
 
 .text-xs { font-size: 0.65rem; }
-.text-sm { font-size: 0.8rem; }
-.text-md { font-size: 1rem; }
-.text-lg { font-size: 1.4rem; }
-.text-xl { font-size: 1.5rem; }
+.text-sm { font-size: 0.75rem; }
+.text-md { font-size: 0.9rem; }
+.text-lg { font-size: 1.1rem; }
+.text-xl { font-size: 1.25rem; }
 
 .font-medium   { font-weight: 500; }
 .font-semibold { font-weight: 600; }
@@ -291,7 +296,7 @@ input:focus, select:focus, textarea:focus {
 
 .badge.critical { background: var(--destructive); }
 .badge.high { background: #c05000; }
-.badge.medium { background: #b07800; }
+.badge.medium { background: var(--warning); }
 .badge.low, .badge.online { background: var(--secondary); }
 .badge.offline { background: var(--destructive); }
 .badge.neutral {

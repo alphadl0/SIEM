@@ -1,6 +1,7 @@
 using Azure.Monitor.Query;
 using backend.src;
 using backend.src.queries;
+using backend.src.helpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -33,10 +34,10 @@ public class AlertHistoryService
             .Replace("\n", string.Empty);
     }
 
-    public async Task<PagedResult<Alert>> GetPagedAlertsAsync(int page, int pageSize, string? searchTerm = null, string? severity = null, bool? excludeAzure = null, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<Alert>> GetPagedAlertsAsync(int page, int pageSize, bool? excludeAzure = null, CancellationToken cancellationToken = default)
     {
         await EnsureHydratedAsync(cancellationToken);
-        return _alertEngine.GetRecentAlertsPage(page, pageSize, searchTerm, severity, excludeAzure);
+        return _alertEngine.GetRecentAlertsPage(page, pageSize, excludeAzure);
     }
 
     private async Task<Azure.Response<Azure.Monitor.Query.Models.LogsQueryResult>?> SafeQueryAsync(LogsQueryClient client, string workspaceId, string query, QueryTimeRange timeRange, CancellationToken ct)
@@ -223,13 +224,6 @@ public class AlertHistoryService
 
     private static DateTime GetTimestamp(object? value)
     {
-        return value switch
-        {
-            DateTimeOffset offset => offset.UtcDateTime,
-            DateTime timestamp when timestamp.Kind == DateTimeKind.Utc => timestamp,
-            DateTime timestamp when timestamp.Kind == DateTimeKind.Local => timestamp.ToUniversalTime(),
-            DateTime timestamp => DateTime.SpecifyKind(timestamp, DateTimeKind.Utc),
-            _ => DateTime.UtcNow
-        };
+        return TimestampHelper.GetTimestamp(value);
     }
 }

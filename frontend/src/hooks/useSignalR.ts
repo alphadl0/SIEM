@@ -33,6 +33,21 @@ export interface VmStatusEvent {
   memoryTotalGb?: number;
   diskUsedGb?: number;
   diskTotalGb?: number;
+  networkInMbps?: number;
+  networkOutMbps?: number;
+  cpuPercent?: number;
+  type?: string; 
+}
+
+export interface SqlStatusEvent {
+  name: string;
+  type: string;
+  status: string;
+  location?: string;
+  size?: string;
+  publicIpAddress?: string;
+  diskUsedGb?: number;
+  diskTotalGb?: number;
 }
 
 export interface AlertEvent {
@@ -70,6 +85,7 @@ interface PollStatusEvent {
 interface SignalRState {
   connection: signalR.HubConnection | null;
   vmStatuses: Record<string, VmStatusEvent>;
+  sqlStatuses: Record<string, SqlStatusEvent>;
   alerts: AlertEvent[];
   lastPoll: PollStatusEvent | null;
   connectionStatus: SignalRConnectionStatus;
@@ -105,6 +121,9 @@ function useProvideSignalR(): SignalRState {
   const [vmStatuses, setVmStatuses] = useState<Record<string, VmStatusEvent>>(
     {},
   );
+  const [sqlStatuses, setSqlStatuses] = useState<Record<string, SqlStatusEvent>>(
+    {},
+  );
   const [alerts, setAlerts] = useState<AlertEvent[]>([]);
   const [lastPoll, setLastPoll] = useState<PollStatusEvent | null>(null);
   const [connectionStatus, setConnectionStatus] =
@@ -115,7 +134,7 @@ function useProvideSignalR(): SignalRState {
     let cancelled = false;
 
     const hydrateRealtimeState = async (activeAccount: AccountInfo) => {
-      const [alertsResult, vmStatusesResult] = await Promise.allSettled([
+      const [alertsResult, vmStatusesResult, sqlStatusesResult] = await Promise.allSettled([
         fetchApiJson<PagedResponse<AlertEvent>>(
           instance,
           activeAccount,
@@ -125,6 +144,11 @@ function useProvideSignalR(): SignalRState {
           instance,
           activeAccount,
           "/api/vm-statuses",
+        ),
+        fetchApiJson<SqlStatusEvent[]>(
+          instance,
+          activeAccount,
+          "/api/sql-statuses",
         ),
       ]);
 
@@ -146,6 +170,17 @@ function useProvideSignalR(): SignalRState {
         console.warn(
           "Failed to hydrate realtime VM statuses",
           vmStatusesResult.reason,
+        );
+      }
+
+      if (sqlStatusesResult.status === "fulfilled") {
+        setSqlStatuses((previous) =>
+          mergeSqlStatuses(sqlStatusesResult.value, previous),
+        );
+      } else {
+        console.warn(
+          "Failed to hydrate realtime SQL statuses",
+          sqlStatusesResult.reason,
         );
       }
     };
@@ -211,6 +246,7 @@ function useProvideSignalR(): SignalRState {
           baseUrl,
           instance,
           setVmStatuses,
+          setSqlStatuses,
           setAlerts,
           setLastPoll,
           setConnectionStatus,
@@ -275,12 +311,13 @@ function useProvideSignalR(): SignalRState {
     () => ({
       connection,
       vmStatuses,
+      sqlStatuses,
       alerts,
       lastPoll,
       connectionStatus,
       connectionError,
     }),
-    [alerts, connection, connectionError, connectionStatus, lastPoll, vmStatuses],
+    [alerts, connection, connectionError, connectionStatus, lastPoll, vmStatuses, sqlStatuses],
   );
 }
 
@@ -289,6 +326,7 @@ function createConnection(
   baseUrl: string,
   instance: ReturnType<typeof useMsal>["instance"],
   setVmStatuses: React.Dispatch<React.SetStateAction<Record<string, VmStatusEvent>>>,
+  setSqlStatuses: React.Dispatch<React.SetStateAction<Record<string, SqlStatusEvent>>>,
   setAlerts: React.Dispatch<React.SetStateAction<AlertEvent[]>>,
   setLastPoll: React.Dispatch<React.SetStateAction<PollStatusEvent | null>>,
   setConnectionStatus: React.Dispatch<React.SetStateAction<SignalRConnectionStatus>>,
@@ -310,6 +348,10 @@ function createConnection(
 
   nextConnection.on("vmStatus", (message: VmStatusEvent) => {
     setVmStatuses((previous) => ({ ...previous, [message.vmName]: message }));
+  });
+
+  nextConnection.on("sqlStatus", (message: SqlStatusEvent) => {
+    setSqlStatuses((previous) => ({ ...previous, [message.name]: message }));
   });
 
   nextConnection.on("newAlert", (alert: AlertEvent) => {
@@ -408,6 +450,16 @@ function createAlertKey(alert: AlertEvent) {
   ].join("|");
 }
 
+function mergeSqlStatuses(
+  newItems: SqlStatusEvent[],
+  previous: Record<string, SqlStatusEvent>,
+) {
+  const next = { ...previous };
+  for (const item of newItems) {
+    next[item.name] = { ...next[item.name], ...item };
+  }
+  return next;
+}
 function mergeVmStatuses(
   incomingStatuses: VmStatusEvent[],
   existingStatuses: Record<string, VmStatusEvent>,

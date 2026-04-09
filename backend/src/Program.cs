@@ -1,5 +1,6 @@
 using backend.src;
 using backend.src.queries;
+using backend.src.helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +10,8 @@ using System.Threading.Tasks;
 using Azure.Monitor.Query;
 using Azure.Identity;
 using Azure.ResourceManager;
+using Azure.ResourceManager.Sql;
+using Azure.ResourceManager.Sql.Models;
 using Azure.ResourceManager.Compute;
 using Azure.ResourceManager.Compute.Models;
 using Azure.ResourceManager.Resources;
@@ -116,16 +119,18 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddHttpClient();
+var defaultCredential = new DefaultAzureCredential();
+builder.Services.AddSingleton(defaultCredential);
+builder.Services.AddSingleton(new LogsQueryClient(defaultCredential));
 builder.Services.AddSingleton<backend.src.services.GeoService>();
 builder.Services.AddSingleton<backend.src.AlertEngine>();
 builder.Services.AddSingleton<backend.src.services.AlertHistoryService>();
 builder.Services.AddSingleton<backend.src.services.VmRunCommandService>();
-builder.Services.AddSingleton(new DefaultAzureCredential());
-builder.Services.AddSingleton(new LogsQueryClient(new DefaultAzureCredential()));
 
 builder.Services.AddSignalR();
 builder.Services.AddHostedService<backend.src.pollers.LogAnalyticsPoller>();
 builder.Services.AddHostedService<backend.src.pollers.VmStatusPoller>();
+builder.Services.AddHostedService<backend.src.pollers.SqlStatusPoller>();
 
 // Ensure the hub uses the routing /hub and requires Auth
 var app = builder.Build();
@@ -143,13 +148,13 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/alerts", async (int? page, int? pageSize, string? searchTerm, string? severity, bool? excludeAzure, backend.src.services.AlertHistoryService historyService, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
+app.MapGet("/api/alerts", async (int? page, int? pageSize, bool? excludeAzure, backend.src.services.AlertHistoryService historyService, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
 {
     var logger = loggerFactory.CreateLogger("AlertsApi");
-    logger.LogInformation("Fetch alerts: page={Page}, size={Size}, search='{Search}', severity='{Severity}', excludeAzure={ExcludeAzure}", page, pageSize, searchTerm, severity, excludeAzure);
-    var normalizedPage = NormalizePage(page);
-    var normalizedPageSize = NormalizePageSize(pageSize, 25);
-    var result = await historyService.GetPagedAlertsAsync(normalizedPage, normalizedPageSize, searchTerm, severity, excludeAzure, cancellationToken);
+    logger.LogInformation("Fetch alerts: page={Page}, size={Size}, excludeAzure={ExcludeAzure}", page, pageSize, excludeAzure);
+    var normalizedPage = QueryHelper.NormalizePage(page);
+    var normalizedPageSize = QueryHelper.NormalizePageSize(pageSize, 25);
+    var result = await historyService.GetPagedAlertsAsync(normalizedPage, normalizedPageSize, excludeAzure, cancellationToken);
     return Results.Ok(result);
 }).RequireAuthorization("SecurityTeamPolicy");
 
@@ -175,7 +180,7 @@ app.MapGet("/api/vm-statuses", async (VmRunCommandService vmRunCommandService, D
             var instanceView = await vm.InstanceViewAsync(cancellationToken: cancellationToken);
             var guestInsights = await vmRunCommandService.GetCachedOrFallbackGuestInsightsAsync(vm, cancellationToken);
 
-            vmStatuses.Add(ProjectVmStatus(vm, GetVmPowerStatus(instanceView.Value), guestInsights));
+            vmStatuses.Add(ProjectVmStatus(vm, VmPowerStatusHelper.GetPowerStatus(instanceView.Value), guestInsights));
         }
         catch (Exception ex)
         {
@@ -186,10 +191,64 @@ app.MapGet("/api/vm-statuses", async (VmRunCommandService vmRunCommandService, D
     return Results.Ok(vmStatuses);
 }).RequireAuthorization("SecurityTeamPolicy");
 
-app.MapGet("/api/signin-logs", async (int? page, int? pageSize, string? searchTerm, string? status, LogsQueryClient client, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
+app.MapGet("/api/sql-statuses", async (DefaultAzureCredential credential, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
+{
+    var subId = CleanSetting(GetSetting(builder.Configuration, "AZURE_SUBSCRIPTION_ID"));
+    var rgName = CleanSetting(GetSetting(builder.Configuration, "AZURE_RESOURCE_GROUP"));
+
+    if (string.IsNullOrWhiteSpace(subId) || string.IsNullOrWhiteSpace(rgName))
+    {
+        return Results.Ok(Array.Empty<object>());
+    }
+
+    var logger = loggerFactory.CreateLogger("SqlStatusSnapshot");
+    var client = new ArmClient(credential);
+    var resourceGroup = client.GetResourceGroupResource(ResourceGroupResource.CreateResourceIdentifier(subId, rgName));
+    var sqlStatuses = new List<object>();
+
+    await foreach (var sqlServer in resourceGroup.GetSqlServers().GetAllAsync(cancellationToken: cancellationToken))
+    {
+        try
+        {
+            var status = sqlServer.Data.State ?? "Ready";
+            sqlStatuses.Add(new
+            {
+                name = sqlServer.Data.Name,
+                type = "SQL Server",
+                status = status,
+                location = sqlServer.Data.Location.DisplayName,
+                size = sqlServer.Data.Version ?? "Unknown Version",
+                publicIpAddress = sqlServer.Data.FullyQualifiedDomainName ?? "Unknown FQDN"
+            });
+
+            await foreach (var db in sqlServer.GetSqlDatabases().GetAllAsync(cancellationToken: cancellationToken))
+            {
+                if (db.Data.Name.Equals("master", StringComparison.OrdinalIgnoreCase)) continue;
+
+                sqlStatuses.Add(new
+                {
+                    name = $"{sqlServer.Data.Name}/{db.Data.Name}",
+                    type = "SQL Database",
+                    status = db.Data.Status?.ToString() ?? "Online",
+                    location = db.Data.Location.DisplayName,
+                    size = db.Data.Sku?.Name ?? "Unknown SKU",
+                    diskTotalGb = db.Data.MaxSizeBytes.HasValue ? Math.Round((double)db.Data.MaxSizeBytes.Value / Math.Pow(1024, 3), 2) : (double?)null
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Unable to snapshot SQL status for {SqlName}.", sqlServer.Data.Name);
+        }
+    }
+
+    return Results.Ok(sqlStatuses);
+}).RequireAuthorization("SecurityTeamPolicy");
+
+app.MapGet("/api/signin-logs", async (int? page, int? pageSize, LogsQueryClient client, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
 {
     var logger = loggerFactory.CreateLogger("SigninLogsApi");
-    logger.LogInformation("Fetch signin-logs: page={Page}, size={Size}, search='{Search}', status='{Status}'", page, pageSize, searchTerm, status);
+    logger.LogInformation("Fetch signin-logs: page={Page}, size={Size}", page, pageSize);
     var workspaceId = CleanSetting(GetSetting(builder.Configuration, "LOG_ANALYTICS_WORKSPACE_ID"));
 
     if (string.IsNullOrWhiteSpace(workspaceId))
@@ -197,20 +256,20 @@ app.MapGet("/api/signin-logs", async (int? page, int? pageSize, string? searchTe
         return Results.Problem("LOG_ANALYTICS_WORKSPACE_ID is not configured.", statusCode: 500);
     }
 
-    var normalizedPage = NormalizePage(page);
-    var normalizedPageSize = NormalizePageSize(pageSize, 25);
+    var normalizedPage = QueryHelper.NormalizePage(page);
+    var normalizedPageSize = QueryHelper.NormalizePageSize(pageSize, 25);
     var skip = (normalizedPage - 1) * normalizedPageSize;
     var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
 
     var response = await client.QueryWorkspaceAsync(
         workspaceId,
-        SigninLogsQueries.GetRecentLogsPageQuery(skip, normalizedPageSize, searchTerm, status),
+        SigninLogsQueries.GetRecentLogsPageQuery(skip, normalizedPageSize),
         timeRange,
         cancellationToken: cancellationToken);
 
     var totalResponse = await client.QueryWorkspaceAsync(
         workspaceId,
-        SigninLogsQueries.GetRecentLogsCountQuery(searchTerm, status),
+        SigninLogsQueries.GetRecentLogsCountQuery(),
         timeRange,
         cancellationToken: cancellationToken);
 
@@ -222,22 +281,21 @@ app.MapGet("/api/signin-logs", async (int? page, int? pageSize, string? searchTe
 
     return Results.Ok(new
     {
-        items = ProjectRows(response.Value.Table).ToArray(),
+        items = QueryHelper.ProjectRows(response.Value.Table).ToArray(),
         page = normalizedPage,
         pageSize = normalizedPageSize,
-        totalCount = GetScalarCount(totalResponse.Value.Table),
-        failedCount = GetScalarCount(failedResponse.Value.Table)
+        totalCount = QueryHelper.GetScalarCount(totalResponse.Value.Table),
+        failedCount = QueryHelper.GetScalarCount(failedResponse.Value.Table)
     });
 }).RequireAuthorization("SecurityTeamPolicy");
 
-app.MapGet("/api/schema", async (IConfiguration configuration, CancellationToken cancellationToken) => {
+app.MapGet("/api/schema", async (IConfiguration configuration, IHttpClientFactory httpClientFactory, DefaultAzureCredential credential, CancellationToken cancellationToken) => {
     var workspaceId = CleanSetting(GetSetting(configuration, "LOG_ANALYTICS_WORKSPACE_ID"));
     if (string.IsNullOrWhiteSpace(workspaceId)) return Results.Problem("Workspace ID not configured.");
 
-    var credential = new DefaultAzureCredential();
     var token = await credential.GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { "https://api.loganalytics.io/.default" }), cancellationToken);
     
-    using var httpClient = new HttpClient();
+    using var httpClient = httpClientFactory.CreateClient();
     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.Token);
     var response = await httpClient.GetAsync($"https://api.loganalytics.io/v1/workspaces/{workspaceId}/metadata", cancellationToken);
     
@@ -249,7 +307,8 @@ app.MapGet("/api/schema", async (IConfiguration configuration, CancellationToken
     return Results.StatusCode((int)response.StatusCode);
 }).RequireAuthorization("SecurityTeamPolicy");
 
-app.MapPost("/api/search", async ([Microsoft.AspNetCore.Mvc.FromBody] SearchRequest req, LogsQueryClient client, CancellationToken cancellationToken) => {
+app.MapPost("/api/search", async ([Microsoft.AspNetCore.Mvc.FromBody] SearchRequest req, LogsQueryClient client, ILoggerFactory loggerFactory, CancellationToken cancellationToken) => {
+    var logger = loggerFactory.CreateLogger("SearchApi");
     var query = req.Query;
     var workspaceId = CleanSetting(GetSetting(builder.Configuration, "LOG_ANALYTICS_WORKSPACE_ID"));
 
@@ -263,6 +322,14 @@ app.MapPost("/api/search", async ([Microsoft.AspNetCore.Mvc.FromBody] SearchRequ
         return Results.BadRequest("Query is required.");
     }
 
+    // Validate query to prevent KQL injection
+    var validation = KqlValidator.Validate(query);
+    if (!validation.IsValid)
+    {
+        logger.LogWarning("Blocked KQL query: {Error}. Query: {Query}", validation.Error, query.Length > 200 ? query[..200] + "..." : query);
+        return Results.BadRequest(validation.Error);
+    }
+
     var response = await client.QueryWorkspaceAsync(
         workspaceId,
         query,
@@ -270,7 +337,7 @@ app.MapPost("/api/search", async ([Microsoft.AspNetCore.Mvc.FromBody] SearchRequ
         cancellationToken: cancellationToken);
 
     var table = response.Value.Table;
-    return Results.Ok(ProjectRows(table));
+    return Results.Ok(QueryHelper.ProjectRows(table));
 }).RequireAuthorization("SecurityTeamPolicy");
 
 app.MapHub<SiemHub>("/hub").RequireAuthorization("SecurityTeamPolicy");
@@ -347,51 +414,12 @@ static bool HasAnyClaim(ClaimsPrincipal user, string requiredValue, params strin
             string.Equals(claim.Value, requiredValue, StringComparison.OrdinalIgnoreCase)));
 }
 
-static IEnumerable<Dictionary<string, object?>> ProjectRows(Azure.Monitor.Query.Models.LogsTable table)
-{
-    return table.Rows.Select(row =>
-        table.Columns.ToDictionary(column => column.Name, column => (object?)row[column.Name]));
-}
-
-static int NormalizePage(int? page)
-{
-    return page.GetValueOrDefault(1) < 1 ? 1 : page.GetValueOrDefault(1);
-}
-
-static int NormalizePageSize(int? pageSize, int defaultValue)
-{
-    var value = pageSize.GetValueOrDefault(defaultValue);
-    if (value < 1)
-    {
-        return defaultValue;
-    }
-
-    return Math.Min(value, 100);
-}
-
-static int GetScalarCount(Azure.Monitor.Query.Models.LogsTable table)
-{
-    if (table.Rows.Count == 0 || table.Columns.Count == 0)
-    {
-        return 0;
-    }
-
-    var firstColumn = table.Columns[0].Name;
-    var raw = table.Rows[0][firstColumn];
-    return raw switch
-    {
-        int count => count,
-        long count => checked((int)count),
-        _ when int.TryParse(raw?.ToString(), out var parsed) => parsed,
-        _ => 0
-    };
-}
-
 static object ProjectVmStatus(VirtualMachineResource vm, string status, VmGuestInsights guestInsights)
 {
     return new
     {
         vmName = vm.Data.Name,
+        type = "Virtual Machine",
         status,
         location = vm.Data.Location.DisplayName,
         vmSize = vm.Data.HardwareProfile?.VmSize?.ToString() ?? "Unknown Size",
@@ -403,46 +431,6 @@ static object ProjectVmStatus(VirtualMachineResource vm, string status, VmGuestI
         memoryTotalGb = guestInsights.MemoryTotalGb,
         diskUsedGb = guestInsights.DiskUsedGb,
         diskTotalGb = guestInsights.DiskTotalGb
-    };
-}
-
-static string GetVmPowerStatus(VirtualMachineInstanceView instanceView)
-{
-    var powerStatus = instanceView.Statuses
-        .FirstOrDefault(status => status.Code.StartsWith("PowerState/", StringComparison.OrdinalIgnoreCase));
-
-    if (!string.IsNullOrWhiteSpace(powerStatus?.DisplayStatus))
-    {
-        return powerStatus.DisplayStatus.Trim();
-    }
-
-    if (powerStatus?.Code is string powerCode)
-    {
-        return powerCode switch
-        {
-            _ when powerCode.Contains("running", StringComparison.OrdinalIgnoreCase) => "VM running",
-            _ when powerCode.Contains("restarting", StringComparison.OrdinalIgnoreCase) => "VM restarting",
-            _ when powerCode.Contains("starting", StringComparison.OrdinalIgnoreCase) => "VM starting",
-            _ when powerCode.Contains("stopping", StringComparison.OrdinalIgnoreCase) => "VM stopping",
-            _ when powerCode.Contains("deallocating", StringComparison.OrdinalIgnoreCase) => "VM deallocating",
-            _ when powerCode.Contains("deallocated", StringComparison.OrdinalIgnoreCase) => "VM deallocated",
-            _ when powerCode.Contains("stopped", StringComparison.OrdinalIgnoreCase) => "VM stopped",
-            _ => "VM unknown"
-        };
-    }
-
-    // No PowerState entry yet — check ProvisioningState for VMs that are still booting up
-    var provisioningStatus = instanceView.Statuses
-        .FirstOrDefault(status => status.Code.StartsWith("ProvisioningState/", StringComparison.OrdinalIgnoreCase));
-
-    return provisioningStatus?.Code switch
-    {
-        string code when code.Contains("creating", StringComparison.OrdinalIgnoreCase) => "VM starting",
-        string code when code.Contains("updating", StringComparison.OrdinalIgnoreCase) => "VM starting",
-        string code when code.Contains("deleting", StringComparison.OrdinalIgnoreCase) => "VM deallocating",
-        string code when code.Contains("failed", StringComparison.OrdinalIgnoreCase) => "VM stopped",
-        string code when code.Contains("succeeded", StringComparison.OrdinalIgnoreCase) => "VM running",
-        _ => "VM unknown"
     };
 }
 

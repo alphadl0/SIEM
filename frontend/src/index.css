@@ -379,6 +379,20 @@ thead th::-webkit-resizer {
   color: var(--text-primary);
 }
 
+.identity-log-header-drag {
+  cursor: grab;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.identity-log-header-drag.dragging {
+  opacity: 0.55;
+}
+
+.identity-log-header-drag.drag-over {
+  box-shadow: inset 0 -2px 0 var(--primary-light);
+}
+
 .contrast-table-head thead th {
   color: var(--text-primary);
 }

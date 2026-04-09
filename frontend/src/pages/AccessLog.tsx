@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type DragEventHandler } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { CircleUserRound } from 'lucide-react';
 import { formatTimestamp } from '../lib/format';
@@ -47,6 +47,62 @@ interface AccessLogRow {
   OperationName?: string;
 }
 
+type ColumnKey =
+  | 'CreatedDateTime'
+  | 'UserPrincipalName'
+  | 'UserDisplayName'
+  | 'UserType'
+  | 'IPAddress'
+  | 'LocationDetails'
+  | 'DeviceDetail'
+  | 'RiskLevelAggregated'
+  | 'RiskLevelDuringSignIn'
+  | 'RiskState'
+  | 'RiskEventTypes_V2'
+  | 'RiskDetail'
+  | 'ConditionalAccessStatus'
+  | 'AppDisplayName'
+  | 'ClientAppUsed'
+  | 'ResourceDisplayName'
+  | 'ResultSignature'
+  | 'ResultDescription'
+  | 'Identity'
+  | 'OperationName';
+
+interface AccessLogColumn {
+  key: ColumnKey;
+  label: string;
+  render: (log: AccessLogRow) => string;
+}
+
+const ACCESS_LOG_COLUMNS: AccessLogColumn[] = [
+  { key: 'CreatedDateTime', label: 'Created Date Time', render: (log) => formatTimestamp(log.CreatedDateTime) },
+  { key: 'UserPrincipalName', label: 'User Principal Name', render: (log) => log.UserPrincipalName ?? '' },
+  { key: 'UserDisplayName', label: 'User Display Name', render: (log) => log.UserDisplayName ?? '' },
+  { key: 'UserType', label: 'User Type', render: (log) => log.UserType ?? '' },
+  { key: 'IPAddress', label: 'IP Address', render: (log) => log.IPAddress ?? '' },
+  { key: 'LocationDetails', label: 'Location Details', render: (log) => getReadableLocation(log) },
+  { key: 'DeviceDetail', label: 'Device Detail', render: (log) => getDeviceLabel(log) },
+  { key: 'RiskLevelAggregated', label: 'Risk Level Aggregated', render: (log) => log.RiskLevelAggregated ?? '' },
+  { key: 'RiskLevelDuringSignIn', label: 'Risk Level During Sign In', render: (log) => log.RiskLevelDuringSignIn ?? '' },
+  { key: 'RiskState', label: 'Risk State', render: (log) => log.RiskState ?? '' },
+  { key: 'RiskEventTypes_V2', label: 'Risk Event Types V2', render: (log) => log.RiskEventTypes_V2 ?? '' },
+  { key: 'RiskDetail', label: 'Risk Detail', render: (log) => log.RiskDetail ?? '' },
+  { key: 'ConditionalAccessStatus', label: 'Conditional Access Status', render: (log) => log.ConditionalAccessStatus ?? '' },
+  { key: 'AppDisplayName', label: 'App Display Name', render: (log) => log.AppDisplayName ?? '' },
+  { key: 'ClientAppUsed', label: 'Client App Used', render: (log) => log.ClientAppUsed ?? '' },
+  { key: 'ResourceDisplayName', label: 'Resource Display Name', render: (log) => log.ResourceDisplayName ?? '' },
+  { key: 'ResultSignature', label: 'Result Signature', render: (log) => log.ResultSignature ?? '' },
+  { key: 'ResultDescription', label: 'Result Description', render: (log) => log.ResultDescription ?? '' },
+  { key: 'Identity', label: 'Identity', render: (log) => log.Identity ?? '' },
+  { key: 'OperationName', label: 'Operation Name', render: (log) => log.OperationName ?? '' },
+];
+
+const ACCESS_LOG_COLUMN_MAP = ACCESS_LOG_COLUMNS.reduce(
+  (acc, column) => ({ ...acc, [column.key]: column }),
+  {} as Record<ColumnKey, AccessLogColumn>
+);
+
 export default function AccessLog() {
   const { instance, accounts } = useMsal();
   const [logs, setLogs] = useState<AccessLogRow[]>([]);
@@ -54,6 +110,9 @@ export default function AccessLog() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => ACCESS_LOG_COLUMNS.map((column) => column.key));
+  const [draggedColumn, setDraggedColumn] = useState<ColumnKey | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<ColumnKey | null>(null);
 
   const fetchLogs = useCallback(async () => {
     if (!accounts[0]) {
@@ -86,6 +145,26 @@ export default function AccessLog() {
   }, [fetchLogs, accounts.length]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const handleColumnDragStart = (columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => () => {
+    setDraggedColumn(columnKey);
+    setDragOverColumn(null);
+  };
+  const handleColumnDragOver = (columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => (event) => {
+    event.preventDefault();
+    if (columnKey !== dragOverColumn) {
+      setDragOverColumn(columnKey);
+    }
+  };
+  const handleColumnDrop = (columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => (event) => {
+    event.preventDefault();
+    setColumnOrder((currentOrder) => reorderColumns(currentOrder, draggedColumn, columnKey));
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+  const handleColumnDragEnd: DragEventHandler<HTMLTableCellElement> = () => {
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
 
   return (
     <div className="fade-in">
@@ -98,61 +177,33 @@ export default function AccessLog() {
           <table className="identity-log-table" style={{ minWidth: '100%', width: 'max-content' }}>
             <thead>
               <tr>
-                <th>Created Date Time</th>
-                <th>User Principal Name</th>
-                <th>User Display Name</th>
-                <th>User Type</th>
-                <th>IP Address</th>
-                <th>Location Details</th>
-                <th>Device Detail</th>
-                <th>Risk Level Aggregated</th>
-                <th>Risk Level During Sign In</th>
-                <th>Risk State</th>
-                <th>Risk Event Types V2</th>
-                <th>Risk Detail</th>
-                <th>Conditional Access Status</th>
-                <th>App Display Name</th>
-                <th>Client App Used</th>
-                <th>Resource Display Name</th>
-                <th>Result Signature</th>
-                <th>Result Description</th>
-                <th>Identity</th>
-                <th>Operation Name</th>
+                {columnOrder.map((columnKey) => {
+                  const column = ACCESS_LOG_COLUMN_MAP[columnKey];
+                  return (
+                    <th
+                      key={columnKey}
+                      draggable
+                      className={`identity-log-header-drag${draggedColumn === columnKey ? ' dragging' : ''}${dragOverColumn === columnKey ? ' drag-over' : ''}`}
+                      onDragStart={handleColumnDragStart(columnKey)}
+                      onDragOver={handleColumnDragOver(columnKey)}
+                      onDrop={handleColumnDrop(columnKey)}
+                      onDragEnd={handleColumnDragEnd}
+                      title="Drag to reorder columns"
+                    >
+                      {column.label}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {logs.map((log, i) => (
                 <tr key={i}>
-                  {(() => {
-                    const deviceLabel = getDeviceLabel(log);
-                    const timestampLabel = formatTimestamp(log.CreatedDateTime);
-                    const locationLabel = getReadableLocation(log);
-
-                    return (
-                      <>
-                        <td className="identity-log-cell">{timestampLabel}</td>
-                        <td className="identity-log-cell">{log.UserPrincipalName}</td>
-                        <td className="identity-log-cell">{log.UserDisplayName}</td>
-                        <td className="identity-log-cell">{log.UserType}</td>
-                        <td className="identity-log-cell">{log.IPAddress}</td>
-                        <td className="identity-log-cell">{locationLabel}</td>
-                        <td className="identity-log-cell">{deviceLabel}</td>
-                        <td className="identity-log-cell">{log.RiskLevelAggregated}</td>
-                        <td className="identity-log-cell">{log.RiskLevelDuringSignIn}</td>
-                        <td className="identity-log-cell">{log.RiskState}</td>
-                        <td className="identity-log-cell">{log.RiskEventTypes_V2}</td>
-                        <td className="identity-log-cell">{log.RiskDetail}</td>
-                        <td className="identity-log-cell">{log.ConditionalAccessStatus}</td>
-                        <td className="identity-log-cell">{log.AppDisplayName}</td>
-                        <td className="identity-log-cell">{log.ClientAppUsed}</td>
-                        <td className="identity-log-cell">{log.ResourceDisplayName}</td>
-                        <td className="identity-log-cell">{log.ResultSignature}</td>
-                        <td className="identity-log-cell">{log.ResultDescription}</td>
-                        <td className="identity-log-cell">{log.Identity}</td>
-                        <td className="identity-log-cell">{log.OperationName}</td>
-                      </>
-                    );
-                  })()}
+                  {columnOrder.map((columnKey) => (
+                    <td key={columnKey} className="identity-log-cell">
+                      {ACCESS_LOG_COLUMN_MAP[columnKey].render(log)}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -209,3 +260,19 @@ function getReadableLocation(log: AccessLogRow) {
   return result || 'Unknown Location';
 }
 
+function reorderColumns(order: ColumnKey[], draggedColumn: ColumnKey | null, targetColumn: ColumnKey): ColumnKey[] {
+  if (!draggedColumn || draggedColumn === targetColumn) {
+    return order;
+  }
+
+  const sourceIndex = order.indexOf(draggedColumn);
+  const targetIndex = order.indexOf(targetColumn);
+  if (sourceIndex < 0 || targetIndex < 0) {
+    return order;
+  }
+
+  const nextOrder = [...order];
+  nextOrder.splice(sourceIndex, 1);
+  nextOrder.splice(targetIndex, 0, draggedColumn);
+  return nextOrder;
+}

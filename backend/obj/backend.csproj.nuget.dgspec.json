@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\mamad\\OneDrive\\Desktop\\SIEM\\backend\\backend.csproj": {}
+    "/home/runner/work/SIEM/SIEM/backend/backend.csproj": {}
   },
   "projects": {
-    "C:\\Users\\mamad\\OneDrive\\Desktop\\SIEM\\backend\\backend.csproj": {
+    "/home/runner/work/SIEM/SIEM/backend/backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\mamad\\OneDrive\\Desktop\\SIEM\\backend\\backend.csproj",
+        "projectUniqueName": "/home/runner/work/SIEM/SIEM/backend/backend.csproj",
         "projectName": "backend",
-        "projectPath": "C:\\Users\\mamad\\OneDrive\\Desktop\\SIEM\\backend\\backend.csproj",
-        "packagesPath": "C:\\Users\\mamad\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\mamad\\OneDrive\\Desktop\\SIEM\\backend\\obj\\",
+        "projectPath": "/home/runner/work/SIEM/SIEM/backend/backend.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/SIEM/SIEM/backend/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\mamad\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/runner/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -92,7 +92,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.201/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

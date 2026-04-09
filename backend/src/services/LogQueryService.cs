@@ -85,7 +85,7 @@ namespace backend.src.services
             var normalizedPage = QueryHelper.NormalizePage(page);
             var normalizedPageSize = QueryHelper.NormalizePageSize(pageSize, 25);
             var skip = (normalizedPage - 1) * normalizedPageSize;
-            var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
+            var timeRange = new QueryTimeRange(TimeSpan.FromDays(30));
 
             var response = await _client.QueryWorkspaceAsync(
                 workspaceId,

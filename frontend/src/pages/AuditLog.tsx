@@ -83,44 +83,18 @@ export default function AuditLog() {
               {logs.map((log, i) => (
                 <tr key={i}>
                   {(() => {
-                    const isSuccess = log.Result?.toLowerCase() === "success";
                     const timestampLabel = formatTimestamp(log.ActivityDateTime);
-                    const identityLabel = log.Identity || 'Unknown identity';
-                    const activityLabel = log.ActivityDisplayName || 'Unknown activity';
-                    const operationLabel = log.OperationName || 'Unknown operation';
-                    const categoryLabel = log.Category || 'Unknown category';
-                    const serviceLabel = log.LoggedByService || 'Unknown service';
 
                     return (
                       <>
-                  <td className="identity-log-cell identity-log-timestamp" title={timestampLabel}>
-                    {timestampLabel}
-                  </td>
-                  <td className="identity-log-cell identity-log-identity" title={identityLabel}>
-                    {identityLabel}
-                  </td>
-                  <td className="identity-log-cell" title={activityLabel}>
-                    <span className="badge neutral identity-log-badge">{activityLabel}</span>
-                  </td>
-                  <td className="identity-log-cell" title={operationLabel}>
-                    {operationLabel}
-                  </td>
-                  <td className="identity-log-cell">
-                    {categoryLabel}
-                  </td>
-                  <td className="identity-log-cell">
-                    {serviceLabel}
-                  </td>
-                  <td className="identity-log-cell">
-                    <span className={`badge ${isSuccess ? "low" : "critical"} identity-log-status-badge`}>
-                      {log.Result || 'Unknown'}
-                    </span>
-                  </td>
-                  <td className="identity-log-cell">
-                    {log.ResultDescription && (
-                        <div style={{fontSize: '0.75rem', color: 'var(--text-muted)'}}>{log.ResultDescription}</div>
-                    )}
-                  </td>
+                        <td className="identity-log-cell">{timestampLabel}</td>
+                        <td className="identity-log-cell">{log.Identity}</td>
+                        <td className="identity-log-cell">{log.ActivityDisplayName}</td>
+                        <td className="identity-log-cell">{log.OperationName}</td>
+                        <td className="identity-log-cell">{log.Category}</td>
+                        <td className="identity-log-cell">{log.LoggedByService}</td>
+                        <td className="identity-log-cell">{log.Result}</td>
+                        <td className="identity-log-cell">{log.ResultDescription}</td>
                       </>
                     );
                   })()}

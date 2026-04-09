@@ -134,6 +134,10 @@ body {
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible; /* Necessary for tooltips to break out */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 10;
 }
 .sidebar.closed {
   width: 70px;

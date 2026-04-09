@@ -8,14 +8,14 @@ import { Pagination } from '../components/Pagination';
 const PAGE_SIZE = 10;
 
 interface AuditLogRow {
-  TimeGenerated: string;
+  ActivityDateTime: string;
   ActivityDisplayName?: string;
   Category?: string;
   Identity?: string;
   LoggedByService?: string;
+  OperationName?: string;
   Result?: string;
   ResultDescription?: string;
-  TargetResources?: string;
 }
 
 export default function AuditLog() {
@@ -23,7 +23,6 @@ export default function AuditLog() {
   const [logs, setLogs] = useState<AuditLogRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [failedCount, setFailedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +41,6 @@ export default function AuditLog() {
       );
       setLogs(data.items);
       setTotalCount(data.totalCount);
-      setFailedCount(data.failedCount ?? 0);
       setError(null);
     } catch (err) {
       console.error('Failed to load audit logs', err);
@@ -62,17 +60,6 @@ export default function AuditLog() {
 
   return (
     <div className="fade-in">
-      <div className="flex gap-md mb-xl">
-         <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>
-            <p className="text-xs font-semibold mb-sm text-secondary">TOTAL AUDIT EVENTS (1H)</p>
-            <h2 className="m-0">{totalCount}</h2>
-         </div>
-         <div className="card text-center" style={{ flex: 1, padding: '1.5rem' }}>
-            <p className="text-xs font-semibold mb-sm text-secondary">FAILED EVENTS</p>
-            <h2 className="m-0 text-critical">{failedCount}</h2>
-         </div>
-      </div>
-
       <div className="card" style={{ overflowX: 'auto' }}>
         <h3 className="flex items-center gap-sm mb-lg text-primary">
             <FileText size={22} className="text-primary" /> Audit Logs
@@ -82,12 +69,14 @@ export default function AuditLog() {
           <table className="identity-log-table" style={{ minWidth: '100%', width: 'max-content' }}>
             <thead>
               <tr>
-                <th>TIMESTAMP</th>
-                <th>IDENTITY</th>
-                <th>ACTIVITY</th>
-                <th>CATEGORY</th>
-                <th>SERVICE</th>
-                <th>STATUS</th>
+                <th>Activity Date Time</th>
+                <th>Identity</th>
+                <th>Activity Display Name</th>
+                <th>Operation Name</th>
+                <th>Category</th>
+                <th>Logged By Service</th>
+                <th>Result</th>
+                <th>Result Description</th>
               </tr>
             </thead>
             <tbody>
@@ -95,9 +84,10 @@ export default function AuditLog() {
                 <tr key={i}>
                   {(() => {
                     const isSuccess = log.Result?.toLowerCase() === "success";
-                    const timestampLabel = formatTimestamp(log.TimeGenerated);
-                    const identityLabel = log.Identity || 'Unknown user';
+                    const timestampLabel = formatTimestamp(log.ActivityDateTime);
+                    const identityLabel = log.Identity || 'Unknown identity';
                     const activityLabel = log.ActivityDisplayName || 'Unknown activity';
+                    const operationLabel = log.OperationName || 'Unknown operation';
                     const categoryLabel = log.Category || 'Unknown category';
                     const serviceLabel = log.LoggedByService || 'Unknown service';
 
@@ -111,9 +101,9 @@ export default function AuditLog() {
                   </td>
                   <td className="identity-log-cell" title={activityLabel}>
                     <span className="badge neutral identity-log-badge">{activityLabel}</span>
-                    {log.ResultDescription && (
-                        <div style={{fontSize: '0.75rem', marginTop: '4px', color: 'var(--text-muted)'}}>{log.ResultDescription}</div>
-                    )}
+                  </td>
+                  <td className="identity-log-cell" title={operationLabel}>
+                    {operationLabel}
                   </td>
                   <td className="identity-log-cell">
                     {categoryLabel}
@@ -125,6 +115,11 @@ export default function AuditLog() {
                     <span className={`badge ${isSuccess ? "low" : "critical"} identity-log-status-badge`}>
                       {log.Result || 'Unknown'}
                     </span>
+                  </td>
+                  <td className="identity-log-cell">
+                    {log.ResultDescription && (
+                        <div style={{fontSize: '0.75rem', color: 'var(--text-muted)'}}>{log.ResultDescription}</div>
+                    )}
                   </td>
                       </>
                     );

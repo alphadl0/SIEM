@@ -14,33 +14,28 @@ AuditLogs
 | extend ActivityName = coalesce(tostring(column_ifexists('ActivityDisplayName', '')), tostring(column_ifexists('OperationName', '')))
 | extend ResultText = tostring(column_ifexists('Result', ''))
 | extend ResultDescriptionText = tostring(column_ifexists('ResultDescription', ''))
+| extend OperationNameText = tostring(column_ifexists('OperationName', ''))
 | where tolower(ResultText) != 'success'
     or ActivityName has_any ('Delete user', 'Add member to role', 'Reset password', 'Add service principal credentials', 'Update application', 'Consent to application')
-| project TimeGenerated,
+| project ActivityDateTime = TimeGenerated,
           ActivityDisplayName = ActivityName,
           Category = tostring(column_ifexists('Category', '')),
           Identity = ActorIdentity,
           LoggedByService = tostring(column_ifexists('LoggedByService', '')),
+          OperationName = OperationNameText,
           Result = ResultText,
-          ResultDescription = ResultDescriptionText,
-          TargetResources = tostring(column_ifexists('TargetResources', dynamic([])))
-| order by TimeGenerated desc";
+          ResultDescription = ResultDescriptionText
+| order by ActivityDateTime desc";
 
     public static string GetRecentLogsPageQuery(int skip, int take) => $@"
 {GetRecentLogsBaseQuery()}
-| order by TimeGenerated desc
+| order by ActivityDateTime desc
 | serialize RowNumber = row_number()
 | where RowNumber > {skip} and RowNumber <= {skip + take}
 | project-away RowNumber";
 
     public static string GetRecentLogsCountQuery() => $@"
 {GetRecentLogsBaseQuery()}
-| count";
-
-    public static string GetFailedLogsCountQuery() => $@"
-AuditLogs
-| extend ResultText = tostring(column_ifexists('Result', ''))
-| where tolower(ResultText) != 'success'
 | count";
 
     private static string GetRecentLogsBaseQuery()
@@ -55,15 +50,16 @@ AuditLogs
     tostring(InitiatedByBag.app.servicePrincipalId),
     'Unknown')
 | extend ActivityName = coalesce(tostring(column_ifexists('ActivityDisplayName', '')), tostring(column_ifexists('OperationName', '')))
+| extend OperationNameText = tostring(column_ifexists('OperationName', ''))
 | extend ResultText = tostring(column_ifexists('Result', ''))
 | extend ResultDescriptionText = tostring(column_ifexists('ResultDescription', ''))
-| project TimeGenerated,
+| project ActivityDateTime = TimeGenerated,
           ActivityDisplayName = ActivityName,
           Category = tostring(column_ifexists('Category', '')),
           Identity = ActorIdentity,
           LoggedByService = tostring(column_ifexists('LoggedByService', '')),
+          OperationName = OperationNameText,
           Result = ResultText,
-          ResultDescription = ResultDescriptionText,
-          TargetResources = tostring(column_ifexists('TargetResources', dynamic([])))";
+          ResultDescription = ResultDescriptionText";
     }
 }

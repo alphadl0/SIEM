@@ -99,19 +99,12 @@ namespace backend.src.services
                 timeRange,
                 cancellationToken: cancellationToken);
 
-            var failedResponse = await _client.QueryWorkspaceAsync(
-                workspaceId,
-                AuditLogsQueries.GetFailedLogsCountQuery(),
-                timeRange,
-                cancellationToken: cancellationToken);
-
             return new
             {
                 items = QueryHelper.ProjectRows(response.Value.Table).ToArray(),
                 page = normalizedPage,
                 pageSize = normalizedPageSize,
-                totalCount = QueryHelper.GetScalarCount(totalResponse.Value.Table),
-                failedCount = QueryHelper.GetScalarCount(failedResponse.Value.Table)
+                totalCount = QueryHelper.GetScalarCount(totalResponse.Value.Table)
             };
         }
 

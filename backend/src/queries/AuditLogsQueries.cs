@@ -14,7 +14,6 @@ AuditLogs
 | extend ActivityName = coalesce(tostring(column_ifexists('ActivityDisplayName', '')), tostring(column_ifexists('OperationName', '')))
 | extend ResultText = tostring(column_ifexists('Result', ''))
 | extend ResultDescriptionText = tostring(column_ifexists('ResultDescription', ''))
-| extend OperationNameText = tostring(column_ifexists('OperationName', ''))
 | where tolower(ResultText) != 'success'
     or ActivityName has_any ('Delete user', 'Add member to role', 'Reset password', 'Add service principal credentials', 'Update application', 'Consent to application')
 | project ActivityDateTime = TimeGenerated,
@@ -22,7 +21,6 @@ AuditLogs
           Category = tostring(column_ifexists('Category', '')),
           Identity = ActorIdentity,
           LoggedByService = tostring(column_ifexists('LoggedByService', '')),
-          OperationName = OperationNameText,
           Result = ResultText,
           ResultDescription = ResultDescriptionText
 | order by ActivityDateTime desc";
@@ -50,7 +48,6 @@ AuditLogs
     tostring(InitiatedByBag.app.servicePrincipalId),
     'Unknown')
 | extend ActivityName = coalesce(tostring(column_ifexists('ActivityDisplayName', '')), tostring(column_ifexists('OperationName', '')))
-| extend OperationNameText = tostring(column_ifexists('OperationName', ''))
 | extend ResultText = tostring(column_ifexists('Result', ''))
 | extend ResultDescriptionText = tostring(column_ifexists('ResultDescription', ''))
 | project ActivityDateTime = TimeGenerated,
@@ -58,7 +55,6 @@ AuditLogs
           Category = tostring(column_ifexists('Category', '')),
           Identity = ActorIdentity,
           LoggedByService = tostring(column_ifexists('LoggedByService', '')),
-          OperationName = OperationNameText,
           Result = ResultText,
           ResultDescription = ResultDescriptionText";
     }

@@ -13,7 +13,6 @@ interface AuditLogRow {
   Category?: string;
   Identity?: string;
   LoggedByService?: string;
-  OperationName?: string;
   Result?: string;
   ResultDescription?: string;
 }
@@ -72,7 +71,6 @@ export default function AuditLog() {
                 <th>Activity Date Time</th>
                 <th>Identity</th>
                 <th>Activity Display Name</th>
-                <th>Operation Name</th>
                 <th>Category</th>
                 <th>Logged By Service</th>
                 <th>Result</th>
@@ -90,7 +88,6 @@ export default function AuditLog() {
                         <td className="identity-log-cell">{timestampLabel}</td>
                         <td className="identity-log-cell">{log.Identity}</td>
                         <td className="identity-log-cell">{log.ActivityDisplayName}</td>
-                        <td className="identity-log-cell">{log.OperationName}</td>
                         <td className="identity-log-cell">{log.Category}</td>
                         <td className="identity-log-cell">{log.LoggedByService}</td>
                         <td className="identity-log-cell">{log.Result}</td>
@@ -102,7 +99,7 @@ export default function AuditLog() {
               ))}
               {logs.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No audit logs found for the selected time period.
                   </td>
                 </tr>

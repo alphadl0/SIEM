@@ -145,26 +145,26 @@ export default function AccessLog() {
   }, [fetchLogs, accounts.length]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const handleColumnDragStart = (columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => () => {
+  const handleColumnDragStart = useCallback((columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => () => {
     setDraggedColumn(columnKey);
     setDragOverColumn(null);
-  };
-  const handleColumnDragOver = (columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => (event) => {
+  }, []);
+  const handleColumnDragOver = useCallback((columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => (event) => {
     event.preventDefault();
     if (columnKey !== dragOverColumn) {
       setDragOverColumn(columnKey);
     }
-  };
-  const handleColumnDrop = (columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => (event) => {
+  }, [dragOverColumn]);
+  const handleColumnDrop = useCallback((columnKey: ColumnKey): DragEventHandler<HTMLTableCellElement> => (event) => {
     event.preventDefault();
     setColumnOrder((currentOrder) => reorderColumns(currentOrder, draggedColumn, columnKey));
     setDraggedColumn(null);
     setDragOverColumn(null);
-  };
-  const handleColumnDragEnd: DragEventHandler<HTMLTableCellElement> = () => {
+  }, [draggedColumn]);
+  const handleColumnDragEnd = useCallback<DragEventHandler<HTMLTableCellElement>>(() => {
     setDraggedColumn(null);
     setDragOverColumn(null);
-  };
+  }, []);
 
   return (
     <div className="fade-in">

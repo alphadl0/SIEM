@@ -87,13 +87,6 @@ export function getKnownBackendUrls() {
   return [getInitialBackendUrl()];
 }
 
-function addKnownUrl(urls: Set<string>, url: string | null | undefined) {
-  if (!url) {
-    return;
-  }
-  urls.add(normalizeUrl(url));
-}
-
 export function rememberBackendUrl(url: string) {
   backendUrl = normalizeUrl(url);
 

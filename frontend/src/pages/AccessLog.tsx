@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useMsal } from '@azure/msal-react';
-import { CircleUserRound } from 'lucide-react';
-import { formatTimestamp, normalizeKnownValue } from '../lib/format';
-import { fetchApiJson, type PagedResponse } from '../lib/backend';
-import { Pagination } from '../components/Pagination';
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { useMsal } from "@azure/msal-react";
+import { CircleUserRound } from "lucide-react";
+import { formatTimestamp, normalizeKnownValue } from "../lib/format";
+import { fetchApiJson, type PagedResponse } from "../lib/backend";
+import { Pagination } from "../components/Pagination";
 
 const PAGE_SIZE = 10;
 
@@ -66,14 +66,16 @@ export default function AccessLog() {
       const data = await fetchApiJson<PagedResponse<AccessLogRow>>(
         instance,
         accounts[0],
-        url
+        url,
       );
       setLogs(data.items);
       setTotalCount(data.totalCount);
       setError(null);
     } catch (err) {
-      console.error('Failed to load sign-in logs', err);
-      setError(err instanceof Error ? err.message : 'Failed to load sign-in logs.');
+      console.error("Failed to load sign-in logs", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load sign-in logs.",
+      );
     } finally {
       setLoading(false);
     }
@@ -85,17 +87,59 @@ export default function AccessLog() {
     }
   }, [fetchLogs, accounts.length]);
 
+  const parsedLogs = useMemo(
+    () =>
+      logs.map((log, index) => {
+        const loc = parseDynamic<LocationDetails>(log.LocationDetails);
+        const dev = parseDynamic<DeviceDetail>(log.DeviceDetail);
+        return {
+          key: `${log.CreatedDateTime}-${log.UserPrincipalName}-${index}`,
+          timestamp: formatTimestamp(log.CreatedDateTime),
+          userPrincipalName: log.UserPrincipalName,
+          userDisplayName: log.UserDisplayName,
+          userType: log.UserType,
+          ipAddress: log.IPAddress,
+          city: normalizeKnownValue(loc.city),
+          state: normalizeKnownValue(loc.state),
+          countryOrRegion: normalizeKnownValue(loc.countryOrRegion),
+          deviceDisplayName: normalizeKnownValue(dev.displayName),
+          operatingSystem: normalizeKnownValue(dev.operatingSystem),
+          browser: normalizeKnownValue(dev.browser),
+          trustType: normalizeKnownValue(dev.trustType),
+          riskLevelAggregated: log.RiskLevelAggregated,
+          riskLevelDuringSignIn: log.RiskLevelDuringSignIn,
+          riskState: log.RiskState,
+          riskEventTypes_V2: log.RiskEventTypes_V2,
+          riskDetail: log.RiskDetail,
+          conditionalAccessStatus: log.ConditionalAccessStatus,
+          appDisplayName: log.AppDisplayName,
+          clientAppUsed: log.ClientAppUsed,
+          resourceDisplayName: log.ResourceDisplayName,
+          resultSignature: log.ResultSignature,
+          resultDescription: log.ResultDescription,
+          identity: log.Identity,
+          operationName: log.OperationName,
+        };
+      }),
+    [logs],
+  );
+
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="fade-in">
-      <div className="card" style={{ overflowX: 'auto' }}>
+      <div className="card" style={{ overflowX: "auto" }}>
         <h3 className="flex items-center gap-sm mb-lg text-primary">
-            <CircleUserRound size={22} className="text-primary" /> Identity Logs
+          <CircleUserRound size={22} className="text-primary" /> Identity Logs
         </h3>
         {error && <p className="text-critical">{error}</p>}
-        {loading ? <p>Analyzing Entra ID logs...</p> : (
-          <table className="identity-log-table" style={{ minWidth: '100%', width: 'max-content' }}>
+        {loading ? (
+          <p>Analyzing Entra ID logs...</p>
+        ) : (
+          <table
+            className="identity-log-table"
+            style={{ minWidth: "100%", width: "max-content" }}
+          >
             <thead>
               <tr>
                 <th>Created Date Time</th>
@@ -121,40 +165,41 @@ export default function AccessLog() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log, i) => (
-                <tr key={i}>
-                  {(() => {
-                    const deviceLabel = getDeviceLabel(log);
-                    const timestampLabel = formatTimestamp(log.CreatedDateTime);
-                    const locationLabel = getReadableLocation(log);
-
-                    return (
-                      <>
-                        <td className="identity-log-cell">{timestampLabel}</td>
-                        <td className="identity-log-cell">{log.UserPrincipalName}</td>
-                        <td className="identity-log-cell">{log.UserDisplayName}</td>
-                        <td className="identity-log-cell">{log.UserType}</td>
-                        <td className="identity-log-cell">{log.IPAddress}</td>
-                        <td className="identity-log-cell">{locationLabel}</td>
-                        <td className="identity-log-cell">{deviceLabel}</td>
-                        <td className="identity-log-cell">{log.RiskLevelAggregated}</td>
-                        <td className="identity-log-cell">{log.RiskLevelDuringSignIn}</td>
-                        <td className="identity-log-cell">{log.RiskState}</td>
-                        <td className="identity-log-cell">{log.RiskEventTypes_V2}</td>
-                        <td className="identity-log-cell">{log.RiskDetail}</td>
-                        <td className="identity-log-cell">{log.ConditionalAccessStatus}</td>
-                        <td className="identity-log-cell">{log.AppDisplayName}</td>
-                        <td className="identity-log-cell">{log.ClientAppUsed}</td>
-                        <td className="identity-log-cell">{log.ResourceDisplayName}</td>
-                        <td className="identity-log-cell">{log.ResultSignature}</td>
-                        <td className="identity-log-cell">{log.ResultDescription}</td>
-                        <td className="identity-log-cell">{log.Identity}</td>
-                        <td className="identity-log-cell">{log.OperationName}</td>
-                      </>
-                    );
-                  })()}
+              {parsedLogs.map((log) => (
+                <tr key={log.key}>
+                  <td className="identity-log-cell">{log.timestamp}</td>
+                  <td className="identity-log-cell">{log.userPrincipalName}</td>
+                  <td className="identity-log-cell">{log.userDisplayName}</td>
+                  <td className="identity-log-cell">{log.userType}</td>
+                  <td className="identity-log-cell">{log.ipAddress}</td>
+                  <td className="identity-log-cell">
+                    {[log.city, log.state, log.countryOrRegion].filter(Boolean).join(', ') || 'Unknown'}
+                  </td>
+                  <td className="identity-log-cell">
+                    {[log.deviceDisplayName, log.operatingSystem, log.browser, log.trustType].filter(Boolean).join(', ') || 'Unknown'}
+                  </td>
+                  <td className="identity-log-cell">{log.riskLevelAggregated}</td>
+                  <td className="identity-log-cell">{log.riskLevelDuringSignIn}</td>
+                  <td className="identity-log-cell">{log.riskState}</td>
+                  <td className="identity-log-cell">{log.riskEventTypes_V2}</td>
+                  <td className="identity-log-cell">{log.riskDetail}</td>
+                  <td className="identity-log-cell">{log.conditionalAccessStatus}</td>
+                  <td className="identity-log-cell">{log.appDisplayName}</td>
+                  <td className="identity-log-cell">{log.clientAppUsed}</td>
+                  <td className="identity-log-cell">{log.resourceDisplayName}</td>
+                  <td className="identity-log-cell">{log.resultSignature}</td>
+                  <td className="identity-log-cell">{log.resultDescription}</td>
+                  <td className="identity-log-cell">{log.identity}</td>
+                  <td className="identity-log-cell">{log.operationName}</td>
                 </tr>
               ))}
+              {parsedLogs.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={20} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No sign-in logs found for the selected time period.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
@@ -174,8 +219,8 @@ export default function AccessLog() {
 
 function parseDynamic<T>(value: unknown): T | Partial<T> {
   if (!value) return {};
-  if (typeof value === 'object') return value;
-  if (typeof value === 'string') {
+  if (typeof value === "object") return value;
+  if (typeof value === "string") {
     try {
       return JSON.parse(value);
     } catch {
@@ -184,32 +229,3 @@ function parseDynamic<T>(value: unknown): T | Partial<T> {
   }
   return {};
 }
-
-function getDeviceLabel(log: AccessLogRow) {
-  const d = parseDynamic<DeviceDetail>(log.DeviceDetail);
-  const values = [d.displayName, d.operatingSystem, d.browser, d.trustType]
-    .map(normalizeKnownValue)
-    .filter((value): value is string => typeof value === 'string' && value.length > 0);
-
-  return Array.from(new Set(values)).join(' • ') || 'Unavailable';
-}
-
-function getReadableLocation(log: AccessLogRow) {
-  const loc = parseDynamic<LocationDetails>(log.LocationDetails);
-  const parts = [loc.city, loc.state, loc.countryOrRegion]
-    .map(normalizeKnownValue)
-    .filter(Boolean);
-  
-  let result = parts.join(', ');
-  
-  if (loc.geoCoordinates && typeof loc.geoCoordinates === 'object') {
-    const hasLatLong = loc.geoCoordinates.latitude !== undefined && loc.geoCoordinates.longitude !== undefined;
-    if (hasLatLong) {
-      const coords = `[${loc.geoCoordinates.latitude}, ${loc.geoCoordinates.longitude}]`;
-      result = result ? `${result} ${coords}` : coords;
-    }
-  }
-  
-  return result || 'Unknown Location';
-}
-

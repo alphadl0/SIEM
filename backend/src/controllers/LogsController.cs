@@ -26,18 +26,40 @@ namespace backend.src.controllers
         public async Task<IActionResult> GetSigninLogs([FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Fetch signin-logs: page={Page}, size={Size}", page, pageSize);
-            var result = await _logQueryService.GetSigninLogsAsync(page, pageSize, cancellationToken);
-            if (result == null) return Problem("Workspace ID is not configured.");
-            return Ok(result);
+            try
+            {
+                var result = await _logQueryService.GetSigninLogsAsync(page, pageSize, cancellationToken);
+                if (result == null) return Problem("Workspace ID is not configured.");
+                return Ok(result);
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Failed to query sign-in logs");
+                return Problem(
+                    statusCode: ex.Status == 429 ? 429 : 502,
+                    title: "Log Analytics query failed",
+                    detail: ex.Message);
+            }
         }
 
         [HttpGet("audit-logs")]
         public async Task<IActionResult> GetAuditLogs([FromQuery] int? page, [FromQuery] int? pageSize, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Fetch audit-logs: page={Page}, size={Size}", page, pageSize);
-            var result = await _logQueryService.GetAuditLogsAsync(page, pageSize, cancellationToken);
-            if (result == null) return Problem("Workspace ID is not configured.");
-            return Ok(result);
+            try
+            {
+                var result = await _logQueryService.GetAuditLogsAsync(page, pageSize, cancellationToken);
+                if (result == null) return Problem("Workspace ID is not configured.");
+                return Ok(result);
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Failed to query audit logs");
+                return Problem(
+                    statusCode: ex.Status == 429 ? 429 : 502,
+                    title: "Log Analytics query failed",
+                    detail: ex.Message);
+            }
         }
 
         [HttpGet("schema")]
@@ -64,6 +86,34 @@ namespace backend.src.controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(ex.Message);
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Search query failed");
+                return Problem(
+                    statusCode: ex.Status == 429 ? 429 : 502,
+                    title: "Log Analytics query failed",
+                    detail: ex.Message);
+            }
+        }
+
+        [HttpGet("process-logs")]
+        public async Task<IActionResult> GetProcessLogs(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Fetch process logs");
+            try
+            {
+                var result = await _logQueryService.GetProcessLogsAsync(cancellationToken);
+                if (result == null) return Problem("Workspace ID is not configured.");
+                return Ok(result);
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Failed to query process logs");
+                return Problem(
+                    statusCode: ex.Status == 429 ? 429 : 502,
+                    title: "Log Analytics query failed",
+                    detail: ex.Message);
             }
         }
     }

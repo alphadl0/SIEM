@@ -25,6 +25,7 @@ public class AlertEngine
 {
     private const int MaxAlertHistory = 2000;
     private readonly ConcurrentDictionary<string, Alert> _alerts = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, DateTime> _suppressionCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly GeoService _geoService;
     private readonly IHubContext<SiemHub> _hubContext;
 
@@ -39,6 +40,17 @@ public class AlertEngine
         switch (eventId)
         {
             case 4624:
+                // Reduce noise: Ignore system/service accounts and implement a 10-minute cooldown per user/computer
+                if (IsSystemAccount(account) || IsSystemAccount(targetAccount))
+                {
+                    return;
+                }
+
+                if (ShouldSuppress("4624", computer, account))
+                {
+                    return;
+                }
+
                 await CreateAlert(timestamp, "Logon Succeeded (Windows)", "Low", computer, ipAddress, $"User {account} logged in successfully.", ct, broadcast);
                 break;
 
@@ -294,5 +306,42 @@ public class AlertEngine
             alert.Vm.Trim(),
             alert.SourceIp.Trim(),
             alert.Description.Trim());
+    }
+
+    private bool IsSystemAccount(string account)
+    {
+        if (string.IsNullOrWhiteSpace(account)) return true;
+        
+        var normalized = account.Trim().ToUpperInvariant();
+        return normalized == "SYSTEM" || 
+               normalized == "LOCAL SERVICE" || 
+               normalized == "NETWORK SERVICE" || 
+               normalized == "ANONYMOUS LOGON" ||
+               normalized.EndsWith("$");
+    }
+
+    private bool ShouldSuppress(string category, string asset, string identity)
+    {
+        var key = $"{category}|{asset}|{identity}";
+        var now = DateTime.UtcNow;
+
+        if (_suppressionCache.TryGetValue(key, out var lastTime))
+        {
+            if (now - lastTime < TimeSpan.FromMinutes(10))
+            {
+                return true;
+            }
+        }
+
+        _suppressionCache[key] = now;
+
+        // Occasional cleanup of old suppression keys
+        if (_suppressionCache.Count > 5000)
+        {
+            var oldKeys = _suppressionCache.Where(kvp => now - kvp.Value > TimeSpan.FromMinutes(30)).Select(kvp => kvp.Key).ToList();
+            foreach (var k in oldKeys) _suppressionCache.TryRemove(k, out _);
+        }
+
+        return false;
     }
 }

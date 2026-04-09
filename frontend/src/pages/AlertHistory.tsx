@@ -73,7 +73,7 @@ export default function AlertHistory() {
             </thead>
             <tbody>
               {displayedAlerts.map((alert, i) => (
-                <tr key={i}>
+                <tr key={`${alert.timestamp}-${alert.title}-${alert.vm}-${i}`}>
                   <td className="incident-cell incident-timestamp" title={formatTimestamp(alert.timestamp)}>
                     {formatTimestamp(alert.timestamp)}
                   </td>

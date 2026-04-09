@@ -81,7 +81,7 @@ export default function AuditLog() {
             </thead>
             <tbody>
               {logs.map((log, i) => (
-                <tr key={i}>
+                <tr key={`${log.ActivityDateTime}-${log.Identity}-${i}`}>
                   {(() => {
                     const timestampLabel = formatTimestamp(log.ActivityDateTime);
 
@@ -100,6 +100,13 @@ export default function AuditLog() {
                   })()}
                 </tr>
               ))}
+              {logs.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No audit logs found for the selected time period.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}

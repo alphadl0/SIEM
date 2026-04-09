@@ -21,13 +21,13 @@ using Microsoft.Extensions.Logging;
 DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
-var tenantId = CleanSetting(GetSetting(builder.Configuration, "AZURE_TENANT_ID"));
-var allowedGroupId = CleanSetting(GetSetting(builder.Configuration, "ENTRA_SECURITY_GROUP_ID"));
-var requiredRole = CleanSetting(GetSetting(builder.Configuration, "ENTRA_REQUIRED_ROLE"));
-var clientId = CleanSetting(GetSetting(builder.Configuration, "ENTRA_CLIENT_ID"));
-var appIdUri = CleanSetting(GetSetting(builder.Configuration, "ENTRA_APP_ID_URI"));
-var requiredScope = CleanSetting(GetSetting(builder.Configuration, "ENTRA_REQUIRED_SCOPE"));
-var allowedOrigins = BuildAllowedOrigins(CleanSetting(GetSetting(builder.Configuration, "FRONTEND_URL")));
+var tenantId = SettingsHelper.Get(builder.Configuration, "AZURE_TENANT_ID");
+var allowedGroupId = SettingsHelper.Get(builder.Configuration, "ENTRA_SECURITY_GROUP_ID");
+var requiredRole = SettingsHelper.Get(builder.Configuration, "ENTRA_REQUIRED_ROLE");
+var clientId = SettingsHelper.Get(builder.Configuration, "ENTRA_CLIENT_ID");
+var appIdUri = SettingsHelper.Get(builder.Configuration, "ENTRA_APP_ID_URI");
+var requiredScope = SettingsHelper.Get(builder.Configuration, "ENTRA_REQUIRED_SCOPE");
+var allowedOrigins = BuildAllowedOrigins(SettingsHelper.Get(builder.Configuration, "FRONTEND_URL"));
 
 if (string.IsNullOrWhiteSpace(requiredScope))
 {
@@ -159,15 +159,7 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-static string GetSetting(IConfiguration configuration, string key)
-{
-    return configuration[key] ?? Environment.GetEnvironmentVariable(key) ?? string.Empty;
-}
 
-static string CleanSetting(string? value)
-{
-    return value?.Trim().Replace("\r", "").Replace("\n", "") ?? string.Empty;
-}
 
 static string[] BuildAllowedOrigins(string configuredOrigins)
 {

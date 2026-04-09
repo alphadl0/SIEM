@@ -32,20 +32,12 @@ namespace backend.src.services
             _logger = logger;
         }
 
-        private string CleanSetting(string? value)
-        {
-            return value?.Trim().Replace("\r", "").Replace("\n", "") ?? string.Empty;
-        }
 
-        private string GetSetting(string key)
-        {
-            return _configuration[key] ?? Environment.GetEnvironmentVariable(key) ?? string.Empty;
-        }
 
         private ResourceGroupResource? GetResourceGroup()
         {
-            var subId = CleanSetting(GetSetting("AZURE_SUBSCRIPTION_ID"));
-            var rgName = CleanSetting(GetSetting("AZURE_RESOURCE_GROUP"));
+            var subId = SettingsHelper.Get(_configuration, "AZURE_SUBSCRIPTION_ID");
+            var rgName = SettingsHelper.Get(_configuration, "AZURE_RESOURCE_GROUP");
 
             if (string.IsNullOrWhiteSpace(subId) || string.IsNullOrWhiteSpace(rgName))
                 return null;

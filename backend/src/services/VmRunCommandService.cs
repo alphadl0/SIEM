@@ -12,6 +12,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using backend.src.helpers;
 
 namespace backend.src.services;
 
@@ -24,11 +25,13 @@ public class VmRunCommandService
     private readonly ConcurrentDictionary<string, double?> _vmMemoryCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<VmRunCommandService> _logger;
     private readonly Azure.Identity.DefaultAzureCredential _credential;
+    private readonly Lazy<ArmClient> _armClient;
 
     public VmRunCommandService(ILogger<VmRunCommandService> logger, Azure.Identity.DefaultAzureCredential credential)
     {
         _logger = logger;
         _credential = credential;
+        _armClient = new Lazy<ArmClient>(() => new ArmClient(credential));
     }
 
     public async Task<VmGuestInsights> GetGuestInsightsAsync(VirtualMachineResource vm, bool isRunning, CancellationToken cancellationToken)
@@ -102,9 +105,9 @@ public class VmRunCommandService
 
     private VirtualMachineResource CreateVirtualMachineResource(string vmName)
     {
-        var client = CreateArmClient();
-        var subId = Environment.GetEnvironmentVariable("AZURE_SUBSCRIPTION_ID") ?? "";
-        var rgName = Environment.GetEnvironmentVariable("AZURE_RESOURCE_GROUP") ?? "";
+        var client = _armClient.Value;
+        var subId = SettingsHelper.GetEnv("AZURE_SUBSCRIPTION_ID");
+        var rgName = SettingsHelper.GetEnv("AZURE_RESOURCE_GROUP");
 
         if (string.IsNullOrEmpty(subId) || string.IsNullOrEmpty(rgName))
         {
@@ -115,21 +118,17 @@ public class VmRunCommandService
         return client.GetVirtualMachineResource(id);
     }
 
-    private ArmClient CreateArmClient()
-    {
-        return new ArmClient(_credential);
-    }
+
 
     private SubscriptionResource CreateSubscriptionResource()
     {
-        var subId = Environment.GetEnvironmentVariable("AZURE_SUBSCRIPTION_ID") ?? "";
+        var subId = SettingsHelper.GetEnv("AZURE_SUBSCRIPTION_ID");
         if (string.IsNullOrWhiteSpace(subId))
         {
             throw new InvalidOperationException("AZURE_SUBSCRIPTION_ID must be configured.");
         }
 
-        var client = CreateArmClient();
-        return client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subId.Trim()}"));
+        return _armClient.Value.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subId}"));
     }
 
     private static RunCommandInput BuildGuestInsightsCommand(string osType)
@@ -290,7 +289,7 @@ public class VmRunCommandService
 
         var privateAddresses = new List<string>();
         var publicAddresses = new List<string>();
-        var client = CreateArmClient();
+        var client = _armClient.Value;
 
         foreach (var nicReference in vm.Data.NetworkProfile?.NetworkInterfaces ?? [])
         {

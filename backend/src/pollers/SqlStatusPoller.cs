@@ -9,6 +9,7 @@ using Azure.Core;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using backend.src.helpers;
 using System;
 using System.Linq;
 using System.Threading;
@@ -33,8 +34,8 @@ public class SqlStatusPoller : BackgroundService
     {
         var credential = _credential;
         ArmClient client = new ArmClient(credential);
-        var subId = Environment.GetEnvironmentVariable("AZURE_SUBSCRIPTION_ID")?.Trim().Replace("\r", "").Replace("\n", "");
-        var rgName = Environment.GetEnvironmentVariable("AZURE_RESOURCE_GROUP")?.Trim().Replace("\r", "").Replace("\n", "");
+        var subId = SettingsHelper.GetEnv("AZURE_SUBSCRIPTION_ID");
+        var rgName = SettingsHelper.GetEnv("AZURE_RESOURCE_GROUP");
         
         while (!stoppingToken.IsCancellationRequested)
         {

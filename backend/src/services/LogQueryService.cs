@@ -16,6 +16,11 @@ namespace backend.src.services
 {
     public class LogQueryService
     {
+        private static readonly LogsQueryOptions QueryOptions = new()
+        {
+            ServerTimeout = TimeSpan.FromSeconds(30)
+        };
+
         private readonly LogsQueryClient _client;
         private readonly DefaultAzureCredential _credential;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -36,19 +41,9 @@ namespace backend.src.services
             _logger = logger;
         }
 
-        private string CleanSetting(string? value)
-        {
-            return value?.Trim().Replace("\r", "").Replace("\n", "") ?? string.Empty;
-        }
-
-        private string GetSetting(string key)
-        {
-            return _configuration[key] ?? Environment.GetEnvironmentVariable(key) ?? string.Empty;
-        }
-
         public async Task<object?> GetSigninLogsAsync(int? page, int? pageSize, CancellationToken cancellationToken)
         {
-            var workspaceId = CleanSetting(GetSetting("LOG_ANALYTICS_WORKSPACE_ID"));
+            var workspaceId = SettingsHelper.Get(_configuration, "LOG_ANALYTICS_WORKSPACE_ID");
             if (string.IsNullOrWhiteSpace(workspaceId)) return null;
 
             var normalizedPage = QueryHelper.NormalizePage(page);
@@ -60,13 +55,15 @@ namespace backend.src.services
                 workspaceId,
                 SigninLogsQueries.GetRecentLogsPageQuery(skip, normalizedPageSize),
                 timeRange,
-                cancellationToken: cancellationToken);
+                QueryOptions,
+                cancellationToken);
 
             var totalResponse = await _client.QueryWorkspaceAsync(
                 workspaceId,
                 SigninLogsQueries.GetRecentLogsCountQuery(),
                 timeRange,
-                cancellationToken: cancellationToken);
+                QueryOptions,
+                cancellationToken);
 
             return new
             {
@@ -79,7 +76,7 @@ namespace backend.src.services
 
         public async Task<object?> GetAuditLogsAsync(int? page, int? pageSize, CancellationToken cancellationToken)
         {
-            var workspaceId = CleanSetting(GetSetting("LOG_ANALYTICS_WORKSPACE_ID"));
+            var workspaceId = SettingsHelper.Get(_configuration, "LOG_ANALYTICS_WORKSPACE_ID");
             if (string.IsNullOrWhiteSpace(workspaceId)) return null;
 
             var normalizedPage = QueryHelper.NormalizePage(page);
@@ -91,13 +88,15 @@ namespace backend.src.services
                 workspaceId,
                 AuditLogsQueries.GetRecentLogsPageQuery(skip, normalizedPageSize),
                 timeRange,
-                cancellationToken: cancellationToken);
+                QueryOptions,
+                cancellationToken);
 
             var totalResponse = await _client.QueryWorkspaceAsync(
                 workspaceId,
                 AuditLogsQueries.GetRecentLogsCountQuery(),
                 timeRange,
-                cancellationToken: cancellationToken);
+                QueryOptions,
+                cancellationToken);
 
             return new
             {
@@ -110,7 +109,7 @@ namespace backend.src.services
 
         public async Task<string?> GetSchemaAsync(CancellationToken cancellationToken)
         {
-            var workspaceId = CleanSetting(GetSetting("LOG_ANALYTICS_WORKSPACE_ID"));
+            var workspaceId = SettingsHelper.Get(_configuration, "LOG_ANALYTICS_WORKSPACE_ID");
             if (string.IsNullOrWhiteSpace(workspaceId)) return null;
 
             var token = await _credential.GetTokenAsync(new TokenRequestContext(new[] { "https://api.loganalytics.io/.default" }), cancellationToken);
@@ -127,7 +126,7 @@ namespace backend.src.services
 
         public async Task<object?> ExecuteSearchAsync(string query, CancellationToken cancellationToken)
         {
-            var workspaceId = CleanSetting(GetSetting("LOG_ANALYTICS_WORKSPACE_ID"));
+            var workspaceId = SettingsHelper.Get(_configuration, "LOG_ANALYTICS_WORKSPACE_ID");
             if (string.IsNullOrWhiteSpace(workspaceId)) return null;
 
             var validation = KqlValidator.Validate(query);
@@ -137,11 +136,35 @@ namespace backend.src.services
                 throw new InvalidOperationException(validation.Error);
             }
 
+            // Enforce a safety limit if the query doesn't already contain one
+            var safeQuery = query;
+            if (!query.Contains("| take ", StringComparison.OrdinalIgnoreCase) &&
+                !query.Contains("| limit ", StringComparison.OrdinalIgnoreCase))
+            {
+                safeQuery = query.TrimEnd() + "\n| take 500";
+            }
+
             var response = await _client.QueryWorkspaceAsync(
                 workspaceId,
-                query,
+                safeQuery,
                 new QueryTimeRange(TimeSpan.FromHours(1)),
-                cancellationToken: cancellationToken);
+                QueryOptions,
+                cancellationToken);
+
+            return QueryHelper.ProjectRows(response.Value.Table);
+        }
+
+        public async Task<object?> GetProcessLogsAsync(CancellationToken cancellationToken)
+        {
+            var workspaceId = SettingsHelper.Get(_configuration, "LOG_ANALYTICS_WORKSPACE_ID");
+            if (string.IsNullOrWhiteSpace(workspaceId)) return null;
+
+            var response = await _client.QueryWorkspaceAsync(
+                workspaceId,
+                ProcessEventQueries.GetQuery(),
+                new QueryTimeRange(TimeSpan.FromHours(1)),
+                QueryOptions,
+                cancellationToken);
 
             return QueryHelper.ProjectRows(response.Value.Table);
         }

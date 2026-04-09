@@ -79,7 +79,7 @@ export default function AzureActivity() {
                 </tr>
               ) : (
                 paginatedAzure.map((alert: AlertEvent, idx: number) => (
-                  <tr key={idx}>
+                  <tr key={`${alert.timestamp}-${alert.title}-${alert.vm}-${idx}`}>
                     <td className="overview-feed-cell overview-feed-timestamp">
                       {formatTimestamp(alert.timestamp)}
                     </td>

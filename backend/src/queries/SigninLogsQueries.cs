@@ -4,8 +4,8 @@ public static class SigninLogsQueries
 {
     public static string GetQuery() => @"
 SigninLogs
-| extend LocationDetailsBag = todynamic(column_ifexists('LocationDetails', dynamic(null)))
-| extend DeviceDetailBag = todynamic(column_ifexists('DeviceDetail', dynamic(null)))
+| extend LocationDetailsBag = parse_json(tostring(column_ifexists('LocationDetails', '{}')))
+| extend DeviceDetailBag = parse_json(tostring(column_ifexists('DeviceDetail', '{}')))
 | extend NormalizedLocation = strcat(tostring(LocationDetailsBag.countryOrRegion), iff(isempty(tostring(LocationDetailsBag.city)), '', strcat(' / ', tostring(LocationDetailsBag.city))))
 | extend NormalizedDevice = strcat(tostring(DeviceDetailBag.operatingSystem), iff(isempty(tostring(DeviceDetailBag.browser)), '', strcat(' / ', tostring(DeviceDetailBag.browser))))
 | extend ResultTypeText = tostring(column_ifexists('ResultType', ''))
@@ -43,15 +43,24 @@ SigninLogs
     {
         return $@"
 SigninLogs
-| extend LocationDetailsBag = todynamic(column_ifexists('LocationDetails', dynamic(null)))
-| extend DeviceDetailBag = todynamic(column_ifexists('DeviceDetail', dynamic(null)))
+| extend loc = parse_json(tostring(column_ifexists('LocationDetails', '')))
+| extend dev = parse_json(tostring(column_ifexists('DeviceDetail', '')))
 | project CreatedDateTime = todatetime(column_ifexists('CreatedDateTime', TimeGenerated)),
           UserPrincipalName = tostring(column_ifexists('UserPrincipalName', '')),
           UserDisplayName = tostring(column_ifexists('UserDisplayName', '')),
           UserType = tostring(column_ifexists('UserType', '')),
           IPAddress = tostring(column_ifexists('IPAddress', '')),
-          LocationDetails = pack('city', tostring(LocationDetailsBag.city), 'state', tostring(LocationDetailsBag.state), 'countryOrRegion', tostring(LocationDetailsBag.countryOrRegion), 'geoCoordinates', LocationDetailsBag.geoCoordinates),
-          DeviceDetail = pack('displayName', tostring(DeviceDetailBag.displayName), 'operatingSystem', tostring(DeviceDetailBag.operatingSystem), 'browser', tostring(DeviceDetailBag.browser), 'trustType', tostring(DeviceDetailBag.trustType)),
+          LocationDetails = tostring(pack(
+              'city', tostring(loc.city),
+              'state', tostring(loc.state),
+              'countryOrRegion', tostring(loc.countryOrRegion)
+          )),
+          DeviceDetail = tostring(pack(
+              'displayName', tostring(dev.displayName),
+              'operatingSystem', tostring(dev.operatingSystem),
+              'browser', tostring(dev.browser),
+              'trustType', tostring(dev.trustType)
+          )),
           RiskLevelAggregated = tostring(column_ifexists('RiskLevelAggregated', '')),
           RiskLevelDuringSignIn = tostring(column_ifexists('RiskLevelDuringSignIn', '')),
           RiskState = tostring(column_ifexists('RiskState', '')),

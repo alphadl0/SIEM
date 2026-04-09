@@ -176,7 +176,7 @@ export default function Dashboard() {
                 </tr>
               ) : (
                 paginatedAlerts.map((alert, idx) => (
-                  <tr key={idx}>
+                  <tr key={`${alert.timestamp}-${alert.title}-${alert.vm}-${idx}`}>
                     <td className="overview-feed-cell overview-feed-timestamp">{formatTimestamp(alert.timestamp)}</td>
                     <td className="overview-feed-cell overview-feed-strong">{alert.title}</td>
                     <td className="overview-feed-cell"><span className="badge neutral overview-feed-truncate">{alert.vm}</span></td>

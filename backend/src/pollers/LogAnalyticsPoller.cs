@@ -29,7 +29,7 @@ public class LogAnalyticsPoller : BackgroundService
         _logger = logger;
         _alertEngine = alertEngine;
         _client = client;
-        _workspaceId = (Environment.GetEnvironmentVariable("LOG_ANALYTICS_WORKSPACE_ID") ?? "").Trim().Replace("\r", "").Replace("\n", "");
+        _workspaceId = SettingsHelper.GetEnv("LOG_ANALYTICS_WORKSPACE_ID");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -45,12 +45,12 @@ public class LogAnalyticsPoller : BackgroundService
                     var timeRange = new QueryTimeRange(TimeSpan.FromMinutes(25)); // Slightly longer to ensure no gaps at 10s poll
 
                     var results = await Task.WhenAll(
-                        SafeQueryAsync(client, _workspaceId, SecurityEventQueries.GetQuery(), timeRange, stoppingToken),
-                        SafeQueryAsync(client, _workspaceId, SyslogQueries.GetQuery(), timeRange, stoppingToken),
-                        SafeQueryAsync(client, _workspaceId, WindowsEventQueries.GetQuery(), timeRange, stoppingToken),
-                        SafeQueryAsync(client, _workspaceId, LinuxAuditQueries.GetQuery(), timeRange, stoppingToken),
-                        SafeQueryAsync(client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, stoppingToken),
-                        SafeQueryAsync(client, _workspaceId, SigninLogsQueries.GetQuery(), timeRange, stoppingToken)
+                        SafeQueryHelper.QueryAsync(client, _workspaceId, SecurityEventQueries.GetQuery(), timeRange, _logger, stoppingToken),
+                        SafeQueryHelper.QueryAsync(client, _workspaceId, SyslogQueries.GetQuery(), timeRange, _logger, stoppingToken),
+                        SafeQueryHelper.QueryAsync(client, _workspaceId, WindowsEventQueries.GetQuery(), timeRange, _logger, stoppingToken),
+                        SafeQueryHelper.QueryAsync(client, _workspaceId, LinuxAuditQueries.GetQuery(), timeRange, _logger, stoppingToken),
+                        SafeQueryHelper.QueryAsync(client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, _logger, stoppingToken),
+                        SafeQueryHelper.QueryAsync(client, _workspaceId, SigninLogsQueries.GetQuery(), timeRange, _logger, stoppingToken)
                     );
 
                     // 1. Process SecurityEvents
@@ -71,7 +71,7 @@ public class LogAnalyticsPoller : BackgroundService
                         }
 
                         await _alertEngine.ProcessSecurityEventAsync(
-                            GetTimestamp(row["TimeGenerated"]),
+                            TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                             row["Computer"]?.ToString() ?? "",
                             Convert.ToInt32(row["EventID"]),
                             row["Account"]?.ToString() ?? "",
@@ -98,7 +98,7 @@ public class LogAnalyticsPoller : BackgroundService
                         }
 
                         await _alertEngine.ProcessSyslogAsync(
-                            GetTimestamp(row["TimeGenerated"]),
+                            TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                             row["HostName"]?.ToString() ?? "",
                             row["SyslogMessage"]?.ToString() ?? "",
                             row["SeverityLevel"]?.ToString() ?? "",
@@ -121,7 +121,7 @@ public class LogAnalyticsPoller : BackgroundService
                         }
 
                         await _alertEngine.ProcessWindowsEventAsync(
-                            GetTimestamp(row["TimeGenerated"]),
+                            TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                             row["Computer"]?.ToString() ?? "",
                             Convert.ToInt32(row["EventID"]),
                             row["RenderedDescription"]?.ToString() ?? "",       
@@ -144,7 +144,7 @@ public class LogAnalyticsPoller : BackgroundService
                         }
 
                         await _alertEngine.ProcessLinuxAuditAsync(
-                            GetTimestamp(row["TimeGenerated"]),
+                            TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                             row["Computer"]?.ToString() ?? "",
                             row["RawData"]?.ToString() ?? "",
                             stoppingToken
@@ -167,7 +167,7 @@ public class LogAnalyticsPoller : BackgroundService
                         }
 
                         await _alertEngine.ProcessAzureActivityLogAsync(        
-                            GetTimestamp(row["TimeGenerated"]),
+                            TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                             row["Caller"]?.ToString() ?? "",
                             row["OperationNameValue"]?.ToString() ?? "",        
                             row["_ResourceId"]?.ToString() ?? "",
@@ -192,7 +192,7 @@ public class LogAnalyticsPoller : BackgroundService
                         }
 
                         await _alertEngine.ProcessSigninLogAsync(
-                            GetTimestamp(row["TimeGenerated"]),
+                            TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                             row["UserPrincipalName"]?.ToString() ?? "",
                             row["IPAddress"]?.ToString() ?? "",
                             row["AppDisplayName"]?.ToString() ?? "",
@@ -231,19 +231,6 @@ public class LogAnalyticsPoller : BackgroundService
         return _processedKeys.TryAdd($"{source}|{fingerprint}", DateTime.UtcNow);
     }
 
-    private async Task<Azure.Response<Azure.Monitor.Query.Models.LogsQueryResult>?> SafeQueryAsync(LogsQueryClient client, string workspaceId, string query, QueryTimeRange timeRange, CancellationToken ct)
-    {
-        try
-        {
-            return await client.QueryWorkspaceAsync(workspaceId, query, timeRange, cancellationToken: ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Poller failed to query workspace.");
-            return null;
-        }
-    }
-
     private void CleanupProcessedKeys()
     {
         var now = DateTime.UtcNow;
@@ -262,10 +249,5 @@ public class LogAnalyticsPoller : BackgroundService
                 _processedKeys.TryRemove(item.Key, out _);
             }
         }
-    }
-
-    private static DateTime GetTimestamp(object? value)
-    {
-        return TimestampHelper.GetTimestamp(value);
     }
 }

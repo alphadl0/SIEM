@@ -444,6 +444,7 @@ function mergeAlerts(
 function createAlertKey(alert: AlertEvent) {
   return [
     alert.timestamp,
+    alert.title,
     alert.vm,
     alert.sourceIp,
     alert.description,

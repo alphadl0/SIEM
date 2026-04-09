@@ -28,10 +28,7 @@ public class AlertHistoryService
         _client = client;
         _alertEngine = alertEngine;
         _logger = logger;
-        _workspaceId = (configuration["LOG_ANALYTICS_WORKSPACE_ID"] ?? Environment.GetEnvironmentVariable("LOG_ANALYTICS_WORKSPACE_ID") ?? string.Empty)
-            .Trim()
-            .Replace("\r", string.Empty)
-            .Replace("\n", string.Empty);
+        _workspaceId = SettingsHelper.Get(configuration, "LOG_ANALYTICS_WORKSPACE_ID");
     }
 
     public async Task<PagedResult<Alert>> GetPagedAlertsAsync(int page, int pageSize, bool? excludeAzure = null, CancellationToken cancellationToken = default)
@@ -40,18 +37,7 @@ public class AlertHistoryService
         return _alertEngine.GetRecentAlertsPage(page, pageSize, excludeAzure);
     }
 
-    private async Task<Azure.Response<Azure.Monitor.Query.Models.LogsQueryResult>?> SafeQueryAsync(LogsQueryClient client, string workspaceId, string query, QueryTimeRange timeRange, CancellationToken ct)
-    {
-        try
-        {
-            return await client.QueryWorkspaceAsync(workspaceId, query, timeRange, cancellationToken: ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to query workspace for historical alerts.");
-            return null;
-        }
-    }
+
 
     private async Task EnsureHydratedAsync(CancellationToken cancellationToken)
     {
@@ -70,20 +56,20 @@ public class AlertHistoryService
 
             var timeRange = new QueryTimeRange(TimeSpan.FromHours(1));
             var results = await Task.WhenAll(
-                SafeQueryAsync(_client, _workspaceId, SecurityEventQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, SyslogQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, WindowsEventQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, LinuxAuditQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, SigninLogsQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, AuditLogsQueries.GetQuery(), timeRange, cancellationToken),
-                SafeQueryAsync(_client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, cancellationToken)
+                SafeQueryHelper.QueryAsync(_client, _workspaceId, SecurityEventQueries.GetQuery(), timeRange, _logger, cancellationToken),
+                SafeQueryHelper.QueryAsync(_client, _workspaceId, SyslogQueries.GetQuery(), timeRange, _logger, cancellationToken),
+                SafeQueryHelper.QueryAsync(_client, _workspaceId, WindowsEventQueries.GetQuery(), timeRange, _logger, cancellationToken),
+                SafeQueryHelper.QueryAsync(_client, _workspaceId, LinuxAuditQueries.GetQuery(), timeRange, _logger, cancellationToken),
+                SafeQueryHelper.QueryAsync(_client, _workspaceId, SigninLogsQueries.GetQuery(), timeRange, _logger, cancellationToken),
+                SafeQueryHelper.QueryAsync(_client, _workspaceId, AuditLogsQueries.GetQuery(), timeRange, _logger, cancellationToken),
+                SafeQueryHelper.QueryAsync(_client, _workspaceId, AzureActivityQueries.GetQuery(), timeRange, _logger, cancellationToken)
             );
 
             var securityEvents = results[0]?.Value?.Table?.Rows;
             if (securityEvents != null) foreach (var row in securityEvents)
             {
                 await _alertEngine.ProcessSecurityEventAsync(
-                    GetTimestamp(row["TimeGenerated"]),
+                    TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                     row["Computer"]?.ToString() ?? string.Empty,
                     Convert.ToInt32(row["EventID"]),
                     row["Account"]?.ToString() ?? string.Empty,
@@ -99,7 +85,7 @@ public class AlertHistoryService
             if (syslogs != null) foreach (var row in syslogs)
             {
                 await _alertEngine.ProcessSyslogAsync(
-                    GetTimestamp(row["TimeGenerated"]),
+                    TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                     row["HostName"]?.ToString() ?? string.Empty,
                     row["SyslogMessage"]?.ToString() ?? string.Empty,
                     row["SeverityLevel"]?.ToString() ?? string.Empty,
@@ -111,7 +97,7 @@ public class AlertHistoryService
             if (windowsEvents != null) foreach (var row in windowsEvents)
             {
                 await _alertEngine.ProcessWindowsEventAsync(
-                    GetTimestamp(row["TimeGenerated"]),
+                    TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                     row["Computer"]?.ToString() ?? string.Empty,
                     Convert.ToInt32(row["EventID"]),
                     row["RenderedDescription"]?.ToString() ?? string.Empty,
@@ -123,7 +109,7 @@ public class AlertHistoryService
             if (linuxAudits != null) foreach (var row in linuxAudits)
             {
                 await _alertEngine.ProcessLinuxAuditAsync(
-                    GetTimestamp(row["TimeGenerated"]),
+                    TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                     row["Computer"]?.ToString() ?? string.Empty,
                     row["RawData"]?.ToString() ?? string.Empty,
                     cancellationToken,
@@ -134,7 +120,7 @@ public class AlertHistoryService
             if (signinLogs != null) foreach (var row in signinLogs)
             {
                 await _alertEngine.ProcessSigninLogAsync(
-                    GetTimestamp(row["TimeGenerated"]),
+                    TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                     row["UserPrincipalName"]?.ToString() ?? string.Empty,
                     row["IPAddress"]?.ToString() ?? string.Empty,
                     row["AppDisplayName"]?.ToString() ?? string.Empty,
@@ -150,8 +136,10 @@ public class AlertHistoryService
             var auditLogs = results[5]?.Value?.Table?.Rows;
             if (auditLogs != null) foreach (var row in auditLogs)
             {
+                // Note: AuditLogsQueries.GetQuery() renames TimeGenerated to ActivityDateTime
+                // Note: TargetResources is not projected by the query, so targets will be empty
                 await _alertEngine.ProcessAuditLogAsync(
-                    GetTimestamp(row["TimeGenerated"]),
+                    TimestampHelper.GetTimestamp(row["ActivityDateTime"]),
                     row["ActivityDisplayName"]?.ToString() ?? string.Empty,
                     row["Category"]?.ToString() ?? string.Empty,
                     row["Identity"]?.ToString() ?? string.Empty,
@@ -167,7 +155,7 @@ public class AlertHistoryService
             if (azureActivities != null) foreach (var row in azureActivities)
             {
                 await _alertEngine.ProcessAzureActivityLogAsync(
-                    GetTimestamp(row["TimeGenerated"]),
+                    TimestampHelper.GetTimestamp(row["TimeGenerated"]),
                     row["Caller"]?.ToString() ?? string.Empty,
                     row["OperationNameValue"]?.ToString() ?? string.Empty,
                     row["_ResourceId"]?.ToString() ?? string.Empty,
@@ -189,8 +177,4 @@ public class AlertHistoryService
         }
     }
 
-    private static DateTime GetTimestamp(object? value)
-    {
-        return TimestampHelper.GetTimestamp(value);
-    }
 }

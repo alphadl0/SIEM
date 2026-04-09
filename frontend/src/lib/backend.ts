@@ -10,7 +10,6 @@ const DEFAULT_BACKEND_URL = import.meta.env.DEV
   ? "http://localhost:5113"
   : "https://localhost:7031";
 
-const BACKEND_URL_STORAGE_KEY = "siem.backendUrl";
 let backendUrl = getInitialBackendUrl();
 
 export interface PagedResponse<T> {
@@ -58,7 +57,7 @@ export async function fetchApiJson<T>(
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${accessToken}`);
 
-  try {
+  const doFetch = async () => {
     const response = await fetch(buildBackendUrl(path, baseUrl), {
       ...init,
       headers,
@@ -70,7 +69,25 @@ export async function fetchApiJson<T>(
     }
 
     return (await response.json()) as T;
+  };
+
+  try {
+    return await doFetch();
   } catch (error) {
+    // Retry once on transient failures for GET requests
+    if (!init.method || init.method === "GET") {
+      const msg = error instanceof Error ? error.message : "";
+      const isTransient =
+        msg.includes("429") ||
+        msg.includes("502") ||
+        msg.includes("503") ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("NetworkError");
+      if (isTransient) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return await doFetch();
+      }
+    }
     throw error instanceof Error ? error : new Error("Failed to fetch");
   }
 }
@@ -89,8 +106,4 @@ export function getKnownBackendUrls() {
 
 export function rememberBackendUrl(url: string) {
   backendUrl = normalizeUrl(url);
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(BACKEND_URL_STORAGE_KEY, backendUrl);
-  }
 }

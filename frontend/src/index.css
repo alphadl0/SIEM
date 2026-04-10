@@ -32,8 +32,8 @@
   --transition:      0.18s ease;
 }
 
-/* Kill all shadows globally */
-*, *::before, *::after { box-shadow: none !important; box-sizing: border-box; }
+/* Core setup */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   --destructive-light: #fef2f2;
@@ -126,10 +126,10 @@ body {
 }
 
 .sidebar {
-  width: 250px;
+  width: 240px;
   background: var(--primary);
   color: white;
-  padding: 2rem 1.5rem;
+  padding: 2rem 1.1rem;
   display: flex;
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -140,14 +140,14 @@ body {
   z-index: 10;
 }
 .sidebar.closed {
-  width: 70px;
-  padding: 2rem 0.5rem;
+  width: 60px;
+  padding: 2rem 0.4rem;
 }
 .sidebar-title {
   white-space: nowrap;
   overflow: hidden;
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 100px;
+  width: 180px;
   margin-left: 0.8rem;
 }
 .sidebar.closed .sidebar-title {
@@ -169,7 +169,7 @@ body {
   margin-left: 0;
 }
 .sidebar.closed .nav-item {
-  padding: 0.8rem 19px; /* Shift padding to perfectly center 16px icon in 54px width */
+  padding: 0.8rem 15px; /* Shift padding to perfectly center 16px icon in 46px width */
   position: relative;
   overflow: visible; /* Let tooltip hang out */
   justify-content: flex-start; /* Keep it left-aligned to slide cleanly */
@@ -787,27 +787,54 @@ tbody td {
 
 .login-btn {
   width: 100%;
-  padding: 1rem;
-  font-size: 1rem;
+  padding: 0.75rem;
+  font-size: 0.95rem;
   display: flex !important;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   background: var(--primary) !important;
   border-radius: 12px;
-  transition: all 0.2s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   color: white !important;
   border: none;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.login-btn::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
 }
 
 .login-btn:hover {
-  background: var(--primary-light) !important;
+  box-shadow: 0 4px 15px rgba(17, 75, 95, 0.25);
   transform: none !important;
 }
 
+.login-btn:hover::before {
+  opacity: 1;
+}
+
 .login-btn:active {
-  background: var(--primary) !important;
+  opacity: 0.95;
+  transform: none !important;
+}
+
+.shadow-premium {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+    0 10px 15px -3px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(17, 75, 95, 0.04);
 }
 
 

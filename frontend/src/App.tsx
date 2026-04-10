@@ -38,7 +38,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <aside className={`sidebar ${isSidebarOpen ? '' : 'closed'}`}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginBottom: "2.5rem", padding: "0 0.5rem" }}>
               <img src="/logo1.png" alt="Logo" style={{ width: "36px", height: "36px", marginBottom: '0.4rem', display: 'block' }} />
-              <h4 className="sidebar-title" style={{ color: "white", margin: 0, fontWeight: 700, fontSize: "1.05rem", textAlign: 'center' }}>SIEM Portal</h4>
+              <h4 className="sidebar-title" style={{ color: "white", margin: 0, fontWeight: 700, fontSize: "1.05rem", textAlign: 'center' }}>Sporthink - SIEM Portal</h4>
             </div>
         <nav style={{ flex: 1, display: "flex", flexDirection: "column" }} onClick={() => setIsSidebarOpen(false)}>
           <NavLink to="/dashboard" data-title="Overview" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -64,7 +64,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Search size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>KQL Log Explorer</span>
           </NavLink>
         </nav>
-        <div style={{ padding: 0, marginRight: isSidebarOpen ? "-1rem" : 0, marginTop: "auto", marginBottom: "-1.5rem", display: "flex", justifyContent: isSidebarOpen ? "flex-end" : "center", position: "relative" }}>
+        <div style={{ padding: 0, marginRight: isSidebarOpen ? "-0.5rem" : 0, marginTop: "auto", marginBottom: "-1.5rem", display: "flex", justifyContent: isSidebarOpen ? "flex-end" : "center", position: "relative", zIndex: 20 }}>
           <button className="btn-no-anim toggle-nav-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             data-title={isSidebarOpen ? "Collapse menu" : "Expand menu"}
             style={{
@@ -153,22 +153,22 @@ function Welcome() {
       background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
       padding: '1rem'
     }}>
-      <div className="card" style={{ 
+      <div className="card shadow-premium" style={{ 
         width: "100%", 
-        maxWidth: "420px", 
-        padding: "3rem 2.5rem", 
+        maxWidth: "380px", 
+        padding: "2.5rem 2rem", 
         textAlign: "center",
-        border: '1px solid rgba(17, 75, 95, 0.1)'
+        border: '1px solid rgba(17, 75, 95, 0.08)'
       }}>
         <div style={{ 
-          width: '80px', 
-          height: '80px', 
+          width: '72px', 
+          height: '72px', 
           background: 'white', 
           borderRadius: '50%', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center', 
-          margin: '0 auto 1.5rem auto',
+          margin: '0 auto 1.25rem auto',
           border: '1px solid #f1f5f9'
         }}>
           <img src="/logo.png" alt="Logo" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
@@ -186,9 +186,9 @@ function Welcome() {
         
         <p style={{ 
           color: '#334155', 
-          fontSize: '0.925rem',
+          fontSize: '0.9rem',
           fontWeight: 500,
-          margin: '0 0 3.5rem 0',
+          margin: '0 0 2rem 0',
           lineHeight: 1.5
         }}>
           Security Information & Event Management<br/><br/>
@@ -204,9 +204,9 @@ function Welcome() {
           Sign in with Microsoft
         </button>
         
-        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #cbd5e1' }}>
-          <p style={{ margin: 0, fontSize: '0.925rem', color: '#334155', fontWeight: 500 }}>
-            Authorized Personnel Only • Sporthink Security Operations
+        <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #cbd5e1' }}>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
+            Sporthink Security Operations Team
           </p>
         </div>
       </div>

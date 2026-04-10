@@ -5,7 +5,7 @@ import { formatTimestamp } from '../lib/format';
 import { fetchApiJson, type PagedResponse } from '../lib/backend';
 import { Pagination } from '../components/Pagination';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
 interface AuditLogRow {
   ActivityDateTime: string;

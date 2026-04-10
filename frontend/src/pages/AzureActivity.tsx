@@ -7,7 +7,7 @@ import React from "react";
 const ALERTS_PAGE_SIZE = 15;
 
 export default function AzureActivity() {
-  const { alerts, connectionStatus = "Connecting" } = useSignalR();
+  const { alerts } = useSignalR();
   const [azurePage, setAzurePage] = React.useState(1);
 
   const azureAlerts = React.useMemo(
@@ -35,18 +35,6 @@ export default function AzureActivity() {
       <div className="flex justify-between items-center mb-md">
         <div className="flex items-center gap-md">
           <h2 className="m-0 text-lg">Azure Activity Log</h2>
-          <div
-            className={`badge ${
-              connectionStatus === "Connected"
-                ? "low"
-                : connectionStatus === "Unauthorized"
-                ? "critical"
-                : "medium"
-            }`}
-            style={{ fontSize: "0.6rem" }}
-          >
-            SIGNALR: {connectionStatus.toUpperCase()}
-          </div>
         </div>
       </div>
 

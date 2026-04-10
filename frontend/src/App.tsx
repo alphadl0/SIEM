@@ -5,7 +5,7 @@ import {
   useMsal,
 } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-import { SignalRProvider } from "./hooks/useSignalR";
+import { SignalRProvider, useSignalR } from "./hooks/useSignalR";
 import {
   Activity,
   ShieldAlert,
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import React from "react";
 import Dashboard from "./pages/Dashboard";
+import { formatTimestamp } from "./lib/format";
 import AlertHistory from "./pages/AlertHistory";
 import SecuritySearch from "./pages/SecuritySearch";
 import AccessLog from "./pages/AccessLog";
@@ -29,6 +30,7 @@ import AzureActivity from "./pages/AzureActivity";
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { instance, accounts } = useMsal();
+  const { connectionStatus, lastPoll } = useSignalR();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
 
   return (
@@ -87,14 +89,29 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <main style={{ flex: 1, overflowY: 'auto', overflowX: 'visible' }}>
-        <header style={{ height: '55px', background: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem' }}>
+        <header style={{ height: '42px', background: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
                 <h2 style={{ fontSize: '1rem', margin: 0, color: 'var(--primary)', fontWeight: 700 }}>Secunary SIEM Dashboard</h2>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ textAlign: 'right' }}>
-                    <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600 }}>
+                {lastPoll && (
+                  <div style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>
+                    Poll: {formatTimestamp(lastPoll.timestamp)} • Status: <span className="text-success" style={{ fontWeight: 600 }}>{lastPoll.status.charAt(0).toUpperCase() + lastPoll.status.slice(1)}</span>
+                  </div>
+                )}
+                <div
+                  className={`badge ${
+                    connectionStatus === 'Connected' ? 'low' :
+                    connectionStatus === 'Unauthorized' ? 'critical' : 'medium'     
+                  }`}
+                  style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.15rem 0.5rem' }}
+                >
+                  SIGNALR: {connectionStatus.toUpperCase()}
+                </div>
+                <div style={{ borderLeft: '1px solid #e2e8f0', height: '24px', margin: '0 4px' }}></div>
+                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#334155', fontWeight: 600, lineHeight: 1 }}>
                         {accounts[0]?.name} ({accounts[0]?.username})
                     </p>
                 </div>
@@ -102,6 +119,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <button 
                     onClick={() => instance.logoutRedirect()}
                     className="btn-outline"
+                    style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0.2rem 0.75rem', height: 'auto' }}
                 >
                     Sign Out
                 </button>

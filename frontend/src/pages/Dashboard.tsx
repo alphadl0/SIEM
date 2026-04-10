@@ -19,8 +19,6 @@ export default function Dashboard() {
   const {
     alerts,
     vmStatuses,
-    lastPoll,
-    connectionStatus = "Connecting",
   } = useSignalR();
 
   const [alertsPage, setAlertsPage] = React.useState(1);
@@ -98,19 +96,7 @@ export default function Dashboard() {
       <div className="flex justify-between items-center mb-md">
         <div className="flex items-center gap-md">
             <h2 className="m-0 text-lg">Overview Dashboard</h2>
-            <div className={`badge ${
-                connectionStatus === 'Connected' ? 'low' :
-                connectionStatus === 'Unauthorized' ? 'critical' : 'medium'     
-            }`} style={{ fontSize: '0.6rem' }}>
-                SIGNALR: {connectionStatus.toUpperCase()}
-            </div>
         </div>
-        {lastPoll && (
-          <div className="text-xs text-secondary">
-            Poll: {formatTimestamp(lastPoll.timestamp)} •
-            Status: <span className="text-success">{lastPoll.status}</span>
-          </div>
-        )}
       </div>
 
       <div className="flex gap-md mb-md">

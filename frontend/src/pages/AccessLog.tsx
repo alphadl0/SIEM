@@ -126,10 +126,11 @@ export default function AccessLog() {
 
   return (
     <div className="fade-in">
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><CircleUserRound size={32} /> Identity Logs</h1>
+      </div>
+
       <div className="card" style={{ overflowX: "auto" }}>
-        <h3 className="flex items-center gap-sm mb-lg text-primary">
-          <CircleUserRound size={22} className="text-primary" /> Identity Logs
-        </h3>
         {error && <p className="text-critical">{error}</p>}
         {loading ? (
           <p>Analyzing Entra ID logs...</p>

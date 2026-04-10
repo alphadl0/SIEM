@@ -13,6 +13,7 @@ import {
   FileText,
   Search,
   Database,
+  Server,
   LayoutDashboard,
   CloudRain,
   ChevronRight
@@ -57,7 +58,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Activity size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Forensic Processes</span>
           </NavLink>
           <NavLink to="/infrastructure-assets" data-title="Infrastructure Assets" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Database size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Infrastructure Assets</span>
+            <Server size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Infrastructure Assets</span>
           </NavLink>          <NavLink to="/azure-activity" data-title="Azure Activity" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
             <CloudRain size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Azure Activity</span>
           </NavLink>          <NavLink to="/search" data-title="KQL Log Explorer" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -89,37 +90,37 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <main style={{ flex: 1, overflowY: 'auto', overflowX: 'visible' }}>
-        <header style={{ height: '42px', background: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <h2 style={{ fontSize: '1rem', margin: 0, color: 'var(--primary)', fontWeight: 700 }}>Sporthink SIEM Dashboard</h2>
+        <header className="main-header">
+            <div className="flex-shrink-0">
+                <h2 className="header-title">SIEM Portal</h2>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="header-right">
                 {lastPoll && (
-                  <div style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>
+                  <div className="poll-info">
                     Poll: {formatTimestamp(lastPoll.timestamp)} • Status: <span className="text-success" style={{ fontWeight: 600 }}>{lastPoll.status.charAt(0).toUpperCase() + lastPoll.status.slice(1)}</span>
                   </div>
                 )}
                 <div
-                  className={`badge ${
+                  className={`badge header-badge ${
                     connectionStatus === 'Connected' ? 'low' :
                     connectionStatus === 'Unauthorized' ? 'critical' : 'medium'     
                   }`}
-                  style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.15rem 0.5rem' }}
+                  style={{ fontWeight: 600 }}
                 >
-                  SIGNALR: {connectionStatus.toUpperCase()}
+                   SIGNALR: {connectionStatus.toUpperCase()}
                 </div>
-                <div style={{ borderLeft: '1px solid #e2e8f0', height: '24px', margin: '0 4px' }}></div>
-                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center' }}>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#334155', fontWeight: 600, lineHeight: 1 }}>
-                        {accounts[0]?.name} ({accounts[0]?.username})
+                <div className="header-divider"></div>
+                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                    <p className="user-text truncate">
+                        {accounts[0]?.name} <span style={{ fontWeight: 600 }}>({accounts[0]?.username})</span>
                     </p>
                 </div>
-                <div style={{ borderLeft: '1px solid #e2e8f0', height: '24px', margin: '0 4px' }}></div>
+                <div className="header-divider"></div>
                 <button 
                     onClick={() => instance.logoutRedirect()}
-                    className="btn-outline"
-                    style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0.2rem 0.75rem', height: 'auto' }}
+                    className="btn-outline flex-shrink-0"
+                    style={{ fontWeight: 600, padding: '0.2rem 0.75rem', height: 'auto' }}
                 >
                     Sign Out
                 </button>

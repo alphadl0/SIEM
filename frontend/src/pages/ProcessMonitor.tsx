@@ -70,13 +70,14 @@ export default function ProcessMonitor() {
 
   return (
     <div className="fade-in">
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm">
+          <Activity size={32} /> Forensic Processes
+          {selectedAsset && <span className="badge neutral ml-sm">Filtered by: {selectedAsset}</span>}
+        </h1>
+      </div>
+
       <div className="card" style={{ overflowX: 'auto' }}>
-        <h3 className="flex items-center justify-between gap-sm mb-md text-primary">
-          <div className="flex items-center gap-sm">
-            <Activity size={22} className="text-primary" /> Forensic Processes
-            {selectedAsset && <span className="badge neutral ml-sm">Filtered by: {selectedAsset}</span>}
-          </div>
-        </h3>
 
         <div className="flex flex-wrap gap-sm mb-lg">
           {assetCounts.map(([computer, count]) => (

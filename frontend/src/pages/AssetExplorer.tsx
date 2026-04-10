@@ -47,8 +47,8 @@ export default function AssetExplorer() {
 
   return (
     <div className="fade-in">
-      <div style={{ marginBottom: '3rem' }}>
-        <h1 className="m-0 text-xl flex items-center gap-sm"><Server size={28} /> Infrastructure Assets</h1>
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><Server size={32} /> Infrastructure Assets</h1>
       </div>
       
       {assets.length > 0 ? (

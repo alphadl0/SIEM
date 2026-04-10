@@ -67,8 +67,8 @@ export default function SecuritySearch() {
 
   return (
     <div className="fade-in">
-      <div className="flex justify-between items-center mb-md">
-        <h1 className="m-0 text-xl flex items-center gap-sm"><Search size={28} /> KQL Log Explorer</h1>
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><Search size={32} /> KQL Log Explorer</h1>
       </div>
 
       <div className="card mb-lg">

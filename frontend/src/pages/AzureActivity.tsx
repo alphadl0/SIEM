@@ -32,16 +32,11 @@ export default function AzureActivity() {
 
   return (
     <div className="fade-in">
-      <div className="flex justify-between items-center mb-md">
-        <div className="flex items-center gap-md">
-          <h2 className="m-0 text-lg">Azure Activity Log</h2>
-        </div>
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><CloudRain size={32} /> Azure Activity Log</h1>
       </div>
 
-      <div className="card">
-        <h3 className="flex items-center gap-sm mb-lg text-primary">
-          <CloudRain size={20} color="var(--primary)" /> Azure Resource Manager Events
-        </h3>
+      <div className="card" style={{ overflowX: "auto" }}>
         <div style={{ overflowX: "auto" }}>
           <table className="contrast-table-head overview-feed-table">
             <thead>

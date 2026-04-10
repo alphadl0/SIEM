@@ -59,10 +59,11 @@ export default function AuditLog() {
 
   return (
     <div className="fade-in">
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><FileText size={32} /> Audit Logs</h1>
+      </div>
+
       <div className="card" style={{ overflowX: 'auto' }}>
-        <h3 className="flex items-center gap-sm mb-lg text-primary">
-            <FileText size={22} className="text-primary" /> Audit Logs
-        </h3>
         {error && <p className="text-critical">{error}</p>}
         {loading ? <p>Analyzing Entra ID audit logs...</p> : (
           <table className="identity-log-table" style={{ minWidth: '100%', width: 'max-content' }}>

@@ -1,5 +1,5 @@
 import React from "react";
-import { Logs, AlertTriangle, Server } from "lucide-react";
+import { Logs, AlertTriangle, Server, LayoutDashboard } from "lucide-react";
 import { formatTimestamp, getSeverityBadgeClass } from "../lib/format";
 import {
   LineChart,
@@ -93,10 +93,8 @@ export default function Dashboard() {
 
   return (
     <div className="fade-in">
-      <div className="flex justify-between items-center mb-md">
-        <div className="flex items-center gap-md">
-            <h2 className="m-0 text-lg">Overview Dashboard</h2>
-        </div>
+      <div className="flex justify-between items-center mb-xl">
+        <h1 className="m-0 text-xl flex items-center gap-sm"><LayoutDashboard size={32} /> Overview Dashboard</h1>
       </div>
 
       <div className="flex gap-md mb-md">

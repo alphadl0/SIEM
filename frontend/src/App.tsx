@@ -36,10 +36,10 @@ function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside className={`sidebar ${isSidebarOpen ? '' : 'closed'}`}>
-        <div style={{ display: "flex", alignItems: "center", marginBottom: "2.5rem", padding: "0 0.5rem" }}>
-           <img src="/logo.png" alt="Logo" style={{ width: "30px", height: "30px", flexShrink: 0 }} />
-             <h4 className="sidebar-title" style={{ color: "white", margin: 0, fontWeight: 700, fontSize: "0.85rem" }}>SIEM Portal</h4>
-          </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginBottom: "2.5rem", padding: "0 0.5rem" }}>
+              <img src="/logo1.png" alt="Logo" style={{ width: "36px", height: "36px", marginBottom: '0.4rem', display: 'block' }} />
+              <h4 className="sidebar-title" style={{ color: "white", margin: 0, fontWeight: 700, fontSize: "1.05rem", textAlign: 'center' }}>SIEM Portal</h4>
+            </div>
         <nav style={{ flex: 1, display: "flex", flexDirection: "column" }} onClick={() => setIsSidebarOpen(false)}>
           <NavLink to="/dashboard" data-title="Overview" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
             <LayoutDashboard size={16} className="nav-icon" /> <span className="nav-text" style={{ fontSize: "0.825rem", fontWeight: 500 }}>Overview</span>
@@ -91,7 +91,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <main style={{ flex: 1, overflowY: 'auto', overflowX: 'visible' }}>
         <header style={{ height: '42px', background: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-                <h2 style={{ fontSize: '1rem', margin: 0, color: 'var(--primary)', fontWeight: 700 }}>Secunary SIEM Dashboard</h2>
+                <h2 style={{ fontSize: '1rem', margin: 0, color: 'var(--primary)', fontWeight: 700 }}>Sporthink SIEM Dashboard</h2>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -181,29 +181,32 @@ function Welcome() {
           color: 'var(--primary)',
           letterSpacing: '-0.02em'
         }}>
-          SIEM - SECUNARY
+          SIEM - SPORTHINK
         </h1>
         
         <p style={{ 
-          color: 'var(--text-secondary)', 
+          color: '#334155', 
           fontSize: '0.925rem',
-          margin: '0 0 2.5rem 0',
+          fontWeight: 500,
+          margin: '0 0 3.5rem 0',
           lineHeight: 1.5
         }}>
-          Enterprise Security Information & Event Management. Please sign in to access your dashboard.
+          Security Information & Event Management<br/><br/>
+          Please sign in to access your dashboard
         </p>
         
         <button 
           onClick={() => instance.loginRedirect(loginRequest)}
           className="login-btn"
+          style={{ fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}
         >
           <MicrosoftIcon />
-          Sign In with Microsoft
+          Sign in with Microsoft
         </button>
         
-        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
-          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            Authorized Personnel Only • Secunary Security Operations
+        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #cbd5e1' }}>
+          <p style={{ margin: 0, fontSize: '0.925rem', color: '#334155', fontWeight: 500 }}>
+            Authorized Personnel Only • Sporthink Security Operations
           </p>
         </div>
       </div>
